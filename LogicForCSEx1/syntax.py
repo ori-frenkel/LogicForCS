@@ -58,8 +58,16 @@ def is_binary(s: str) -> bool:
 
 
 def in_order(formula_obj, list_to_return) -> None:
+    tmp = False;
     if formula_obj is None:
         return
+    try:
+        if is_binary(formula_obj.root) and type(formula_obj.first) is Formula\
+            and type(formula_obj.second) is Formula:
+            list_to_return[0] += "("
+            tmp = True
+    except AttributeError:
+        pass
     try:
         in_order(formula_obj.second, list_to_return)
     except AttributeError:
@@ -69,6 +77,8 @@ def in_order(formula_obj, list_to_return) -> None:
         in_order(formula_obj.first, list_to_return)
     except AttributeError:
         pass
+    if tmp:
+        list_to_return[0] += ")"
 
 @frozen
 class Formula:
