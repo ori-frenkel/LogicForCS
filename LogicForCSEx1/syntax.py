@@ -66,15 +66,19 @@ def in_order(formula_obj, list_to_return) -> None:
             and type(formula_obj.second) is Formula:
             list_to_return[0] += "("
             tmp = True
+        elif is_unary(formula_obj.root):
+                list_to_return[0] += formula_obj.root
+                in_order(formula_obj.first, list_to_return)
+                return
     except AttributeError:
         pass
     try:
-        in_order(formula_obj.second, list_to_return)
+        in_order(formula_obj.first, list_to_return)
     except AttributeError:
         pass
     list_to_return[0] += formula_obj.root
     try:
-        in_order(formula_obj.first, list_to_return)
+        in_order(formula_obj.second, list_to_return)
     except AttributeError:
         pass
     if tmp:
