@@ -62,10 +62,13 @@ def in_order(formula_obj, list_to_return) -> None:
     if formula_obj is None:
         return
     try:
+        # case where there is root both left and right son.
         if is_binary(formula_obj.root) and type(formula_obj.first) is Formula\
             and type(formula_obj.second) is Formula:
             list_to_return[0] += "("
             tmp = True
+        # case where there is root and left son, and no right son,
+        # for example ~F
         elif is_unary(formula_obj.root):
                 list_to_return[0] += formula_obj.root
                 in_order(formula_obj.first, list_to_return)
