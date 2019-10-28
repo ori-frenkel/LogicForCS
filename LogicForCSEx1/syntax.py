@@ -5,11 +5,10 @@
 
 """Syntactic handling of propositional formulae."""
 
-
+from __future__ import annotations
 from typing import Mapping, Optional, Set, Tuple, Union
 
 from logic_utils import frozen
-
 def is_variable(s: str) -> bool:
     """Checks if the given string is an atomic proposition.
 
@@ -57,7 +56,6 @@ def is_binary(s: str) -> bool:
     # For Chapter 3:
     # return s in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
-
 @frozen
 class Formula:
     """An immutable propositional formula in tree representation.
@@ -73,6 +71,7 @@ class Formula:
     root: str
     first: Optional[Formula]
     second: Optional[Formula]
+
 
     def __init__(self, root: str, first: Optional[Formula] = None,
                  second: Optional[Formula] = None) -> None:
@@ -124,14 +123,15 @@ class Formula:
         return hash(str(self))
 
     def __repr__(self) -> str:
+        list_to_return = [""]
         """Computes the string representation of the current formula.
 
         Returns:
             The standard string representation of the current formula.
         """
         # Task 1.1
-        to_return = ""
-        in_order(self.root)
+        in_order(self, list_to_return)
+        return list_to_return[0]
 
     def variables(self) -> Set[str]:
         """Finds all atomic propositions (variables) in the current formula.
@@ -265,12 +265,12 @@ class Formula:
             assert substitution_map[operator].variables().issubset({'p', 'q'})
         # Task 3.4
 
-def in_order(formul : Formula, final_str : str) -> None:
+def in_order(formul : Formula, list_to_return) -> None:
     if formul is None:
         return
 
-    in_order(formul.root.right, final_str)
+    in_order(formul.first, list_to_return)
 
-    final_str += formul.root.data
+    list_to_return[0] += formul.root
 
-    in_order(formul.root.left, final_str)
+    in_order(formul.second, list_to_return)
