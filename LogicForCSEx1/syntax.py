@@ -56,6 +56,20 @@ def is_binary(s: str) -> bool:
     # For Chapter 3:
     # return s in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
+
+def in_order(formula_obj, list_to_return) -> None:
+    if formula_obj is None:
+        return
+    try:
+        in_order(formula_obj.second, list_to_return)
+    except AttributeError:
+        pass
+    list_to_return[0] += formula_obj.root
+    try:
+        in_order(formula_obj.first, list_to_return)
+    except AttributeError:
+        pass
+
 @frozen
 class Formula:
     """An immutable propositional formula in tree representation.
@@ -71,7 +85,6 @@ class Formula:
     root: str
     first: Optional[Formula]
     second: Optional[Formula]
-
 
     def __init__(self, root: str, first: Optional[Formula] = None,
                  second: Optional[Formula] = None) -> None:
@@ -131,6 +144,7 @@ class Formula:
         """
         # Task 1.1
         in_order(self, list_to_return)
+        print(list_to_return[0])
         return list_to_return[0]
 
     def variables(self) -> Set[str]:
@@ -264,13 +278,3 @@ class Formula:
                    is_constant(operator)
             assert substitution_map[operator].variables().issubset({'p', 'q'})
         # Task 3.4
-
-def in_order(formul : Formula, list_to_return) -> None:
-    if formul is None:
-        return
-
-    in_order(formul.first, list_to_return)
-
-    list_to_return[0] += formul.root
-
-    in_order(formul.second, list_to_return)
