@@ -9,6 +9,10 @@ from __future__ import annotations
 from typing import Mapping, Optional, Set, Tuple, Union
 
 from logic_utils import frozen
+
+VAR = 1
+OPERATOR = 2
+
 def is_variable(s: str) -> bool:
     """Checks if the given string is an atomic proposition.
 
@@ -87,19 +91,29 @@ def in_order_repr_helper(formula_obj, list_to_return) -> None:
     if need_to_close:
         list_to_return[0] += ")"
 
-def in_order_variable_helper(formula_obj, set_to_store : Set[str]):
+"""
+This function traverse the tree, and add to the given set all the
+Variables or Operator depending on the given _type
+VAR = 1
+OPERATOR = 2
+"""
+def in_order_traverse(formula_obj, set_to_store : Set[str], _type):
     if formula_obj is None:
         return
     try:
-        in_order_variable_helper(formula_obj.first, set_to_store)
+        in_order_traverse(formula_obj.first, set_to_store, _type)
     except AttributeError:
         pass
 
-    if is_variable(formula_obj.root):
+    if _type == VAR and is_variable(formula_obj.root):
+        set_to_store.add(formula_obj.root)
+    elif _type == OPERATOR and\
+            (is_unary(formula_obj.root) or is_binary(formula_obj.root) or\
+                     is_constant(formula_obj.root)):
         set_to_store.add(formula_obj.root)
 
     try:
-        in_order_variable_helper(formula_obj.second, set_to_store)
+        in_order_traverse(formula_obj.second, set_to_store, _type)
     except AttributeError:
         pass
 
@@ -187,7 +201,7 @@ class Formula:
         """
         # Task 1.2
         my_set = set([])
-        in_order_variable_helper(self, my_set)
+        in_order_traverse(self, my_set, VAR)
         return my_set
 
 
@@ -199,7 +213,10 @@ class Formula:
             current formula.
         """
         # Task 1.3
-        
+        my_set = set([])
+        in_order_traverse(self, my_set, OPERATOR)
+        return my_set
+
     @staticmethod
     def parse_prefix(s: str) -> Tuple[Union[Formula, None], str]:
         """Parses a prefix of the given string into a formula.
