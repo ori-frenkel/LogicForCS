@@ -58,7 +58,7 @@ def is_binary(s: str) -> bool:
 
 
 def in_order(formula_obj, list_to_return) -> None:
-    tmp = False;
+    tmp = False
     if formula_obj is None:
         return
     try:
