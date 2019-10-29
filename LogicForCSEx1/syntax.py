@@ -57,7 +57,7 @@ def is_binary(s: str) -> bool:
     # return s in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
 
-def in_order(formula_obj, list_to_return) -> None:
+def in_order_repr_helper(formula_obj, list_to_return) -> None:
     need_to_close = False # True if need to close the parentheses - ')'
     if formula_obj is None:
         return
@@ -71,21 +71,37 @@ def in_order(formula_obj, list_to_return) -> None:
         # for example ~F
         elif is_unary(formula_obj.root):
                 list_to_return[0] += formula_obj.root
-                in_order(formula_obj.first, list_to_return)
+                in_order_repr_helper(formula_obj.first, list_to_return)
                 return
     except AttributeError:
         pass
     try:
-        in_order(formula_obj.first, list_to_return)
+        in_order_repr_helper(formula_obj.first, list_to_return)
     except AttributeError:
         pass
     list_to_return[0] += formula_obj.root
     try:
-        in_order(formula_obj.second, list_to_return)
+        in_order_repr_helper(formula_obj.second, list_to_return)
     except AttributeError:
         pass
     if need_to_close:
         list_to_return[0] += ")"
+
+def in_order_variable_helper(formula_obj, set_to_store : Set[str]):
+    if formula_obj is None:
+        return
+    try:
+        in_order_variable_helper(formula_obj.first, set_to_store)
+    except AttributeError:
+        pass
+
+    if is_variable(formula_obj.root):
+        set_to_store.add(formula_obj.root)
+
+    try:
+        in_order_variable_helper(formula_obj.second, set_to_store)
+    except AttributeError:
+        pass
 
 @frozen
 class Formula:
@@ -160,8 +176,7 @@ class Formula:
             The standard string representation of the current formula.
         """
         # Task 1.1
-        in_order(self, list_to_return)
-        print(list_to_return[0])
+        in_order_repr_helper(self, list_to_return)
         return list_to_return[0]
 
     def variables(self) -> Set[str]:
@@ -171,6 +186,10 @@ class Formula:
             A set of all atomic propositions used in the current formula.
         """
         # Task 1.2
+        my_set = set([])
+        in_order_variable_helper(self, my_set)
+        return my_set
+
 
     def operators(self) -> Set[str]:
         """Finds all operators in the current formula.
