@@ -160,9 +160,9 @@ def handle_binary(list_str):
     # if its binary operator, return it. binary operator : & or |
     if is_binary(list_str[0][0:1]):
         temp = list_str[0][:1]
-        print("binary is : ", temp)
+        # print("binary is : ", temp)
         list_str[0] = list_str[0][1:]
-        print("new one is : ", list_str[0])
+        # print("new one is : ", list_str[0])
         return temp
     # one more binary operator : ->
     elif is_binary(list_str[0][:2]):
@@ -175,13 +175,13 @@ def handle_binary(list_str):
 def str_to_form(list_str):
     if len(list_str[0]) == 0 or list_str[0] == '':
         list_str[0] = EMPTY_INPUT_ERR
-        print("None7")
+        # print("None7")
         return None
     # handle case such as '~'
     if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
-        print("---------")
+        # print("---------")
         list_str[0] = UNARY_FOLLOWED_BY_NOTHING_ERR
-        print("None5")
+        # print("None5")
         return None
     # in unary check if it '~'
     if is_unary(list_str[0][0:1]):
@@ -208,7 +208,7 @@ def str_to_form(list_str):
         # need to end with ')'
         if len(list_str[0]) == 0 or list_str[0][0] != ")":
             list_str[0] = CLOSED_PARENTHESIS_MISSING_ERR
-            print("None4")
+            # print("None4")
             return None
         else:
             list_str[0] = list_str[0][1:] # removing the ')'
@@ -222,7 +222,7 @@ def str_to_form(list_str):
     elif is_variable(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
         list_str[0] = ""
-        print("remaining is nothing - ''")
+        # print("remaining is nothing - ''")
         return Formula(temp)
     # part of the remaining is legal variable
     elif is_variable(list_str[0][0]):
@@ -230,14 +230,14 @@ def str_to_form(list_str):
             if j != 0 and not char.isdigit():
                 temp = list_str[0][:j]
                 list_str[0] = list_str[0][j:]
-                print("temp is : ", temp)
-                print("2reaming is : ", list_str[0])
+                # print("temp is : ", temp)
+                # print("2reaming is : ", list_str[0])
                 return Formula(temp)
     elif is_constant(list_str[0][0]):
         the_const = list_str[0][0]
         list_str[0] = list_str[0][1:]
-        print("The const is : ", the_const)
-        print("The remaining is : ", list_str[0])
+        # print("The const is : ", the_const)
+        # print("The remaining is : ", list_str[0])
         return Formula(the_const)
     elif list_str[0][0] == ")":
         # list_str[0] = ''
@@ -246,9 +246,9 @@ def str_to_form(list_str):
         #todo : maybe a case where ends with )
         list_str[0] = list_str[0][1:]
     else:
-        print("here None")
+        # print("here None")
         list_str[0] = VAR_ERR
-        print("None8")
+        # print("None8")
         return None
 
 def str_to_formula(s : str):
@@ -395,8 +395,9 @@ class Formula:
         # print(temp1.root)
         # first would need to check that the number of
         #  '(' equals to number of ')'
-        print(str(str_to_form(list_h)))
-        print("The remaining is : ", list_h[0])
+        # print(str(str_to_form(list_h)))
+        # print("The remaining is : ", list_h[0])
+        return (str_to_form(list_h), list_h[0])
 
 
     @staticmethod
