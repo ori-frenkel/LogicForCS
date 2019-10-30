@@ -15,7 +15,8 @@ OPERATOR = 2
 EMPTY_INPUT_ERR = "The given string in empty"
 UNARY_FOLLOWED_BY_NOTHING_ERR = "unary must be followed by valid" \
                                 "propositional formulae "
-CLOSED_PARENTHESIS_MISSING_ERR = "You need to close each '(' by ')'"
+CLOSED_PARENTHESIS_MISSING_ERR = "You have problems with the '(' and ')'" \
+                                " check that you put it in the intended way"
 
 PROPOSITIONAL_FORMULAE_ERR = "(X Binary operator Y) X and Y must be valid "\
                               "propositional formulae "
