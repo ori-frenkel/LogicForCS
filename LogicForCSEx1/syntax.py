@@ -230,7 +230,7 @@ def str_to_form(list_str):
         temp = list_str[0]
         list_str[0] = ""
         return Formula(temp)
-    
+
     # part of the remaining is legal variable
     elif is_variable(list_str[0][0]):
         for j,char in enumerate(list_str[0]):
@@ -366,12 +366,6 @@ class Formula:
         """
         # Task 1.4
         list_h = [s]
-        # temp1 = str_to_form(list_h)
-        # print(temp1.root)
-        # first would need to check that the number of
-        #  '(' equals to number of ')'
-        # print(str(str_to_form(list_h)))
-        # print("The remaining is : ", list_h[0])
         return (str_to_form(list_h), list_h[0])
 
 
@@ -386,9 +380,13 @@ class Formula:
             ``True`` if the given string is a valid standard string
             representation of a formula, ``False`` otherwise.
         """
-        Formula.parse_prefix(s)[0]
+
         # Task 1.5
-        
+        parsed_ver = Formula.parse_prefix(s)
+        if len(parsed_ver[1]) != 0 or parsed_ver[0] is None:
+            return False
+        return True
+
     @staticmethod
     def parse(s: str) -> Formula:
         """Parses the given valid string representation into a formula.
@@ -401,6 +399,7 @@ class Formula:
         """
         assert Formula.is_formula(s)
         # Task 1.6
+
 
 # Optional tasks for Chapter 1
 
