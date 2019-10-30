@@ -145,7 +145,7 @@ def str_to_form(list_str):
     # in unary check if it '~'
     if is_unary(list_str[0][0:1]):
         list_str[0] = list_str[0][1:] # removing what we deal with - '~'
-        return Formula("~", str_to_form(list_str[0][1:]))
+        return Formula("~", str_to_form(list_str))
     # handle case (X binary_operator Y)
     elif list_str[0][0:1] == "(":
         list_str[0] = list_str[0][1:]
@@ -172,7 +172,9 @@ def str_to_form(list_str):
     elif legal_var_seq(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
         list_str[0] = ""
+        print("remaining is nothing - ''")
         return Formula(temp)
+    # part of the remaining is legal variable
     elif legal_var_seq(list_str[0][0]):
         for j,char in enumerate(list_str[0]):
             if j != 0 and not char.isdigit():
@@ -181,6 +183,12 @@ def str_to_form(list_str):
                 print("temp is : ", temp)
                 print("reaming is : ", list_str[0])
                 return Formula(temp)
+    elif is_constant(list_str[0][0]):
+        the_const = list_str[0][0]
+        list_str[0] = list_str[0][1:]
+        print("The const is : ", the_const)
+        print("The remaining is : ", list_str[0])
+        return Formula(the_const)
     elif list_str[0] == ")":
         # list_str[0] = ''
         # print("here")
