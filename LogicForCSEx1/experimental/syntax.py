@@ -69,6 +69,15 @@ def is_binary(s: str) -> bool:
     # For Chapter 3:
     # return s in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
+# return true if the given string is valid propositional formula
+def is_valid_propositional_formula(s: str) -> bool:
+    i = 0
+    while s[i] == "~":
+        i+=1
+    if s[i] == "(":
+        is_valid_propositional_formula(s[i:])
+    return is_variable_or_constant(s[i:])
+
 
 def in_order_repr_helper(formula_obj, list_to_return) -> None:
     need_to_close = False # True if need to close the parentheses - ')'
@@ -135,8 +144,8 @@ def check_for_none(_input):
         return False
 
 
-def is_variable_or_constant(part1):
-    if not (is_variable(part1) or is_constant(part1)):
+def is_variable_or_constant(s:str) -> bool:
+    if not (is_variable(s) or is_constant(s)):
         return False
     return True
 
@@ -166,14 +175,14 @@ def str_to_form(list_str):
             return None
         else:
             list_str[0] = list_str[0][1:] # removing the ')'
-#        print("remaining is : - ", len(list_str[0]), " is : ", list_str[0][0])
+        # print("remaining is : - ", len(list_str[0]), " is : ", list_str[0][0])
         if check_for_none(part1) or check_for_none(part2) or check_for_none(part3):
             return None
-        elif not (is_variable_or_constant(str(part1)) or is_variable_or_constant(str(part3))):
-            print("Should be (X operator Y")
+        elif not (is_valid_propositional_formula(str(part1)) and is_valid_propositional_formula(str(part3))):
+            print("Should be (X operator Y, part 1 : ", str(part1), " |||part 3 : ", part3)
             return None
         elif not (is_binary(part2) or part2 == "->"):
-            return False
+            return None
         else:
             return Formula(part2, part1, part3)
     # if its binary operator, return it. binary operator : & or |
