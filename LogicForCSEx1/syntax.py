@@ -196,33 +196,41 @@ def handle_parenthesis_case(list_str):
 
     return Formula(part2, part1, part3)
 
+# handle the case that it start with unary '~'
+def handle_unary(list_str):
+    if list_str[0][1:] == '' or list_str[0][1:] is None:
+        list_str[0] = UNARY_FOLLOWED_BY_NOTHING_ERR
+        return None
+    list_str[0] = list_str[0][1:]  # removing what we deal with - '~'
+    temp_formula = str_to_form(list_str)
+    if temp_formula is None:
+        return None
+    return Formula("~", temp_formula)
+
 def str_to_form(list_str):
     if len(list_str[0]) == 0 or list_str[0] == '':
         list_str[0] = EMPTY_INPUT_ERR
         return None
-    # handle case such as '~'
-    if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
-        list_str[0] = UNARY_FOLLOWED_BY_NOTHING_ERR
-        return None
-    # in unary check if it '~'
+
+    # case where it start with unary '~'
     if is_unary(list_str[0][0:1]):
-        list_str[0] = list_str[0][1:] # removing what we deal with - '~'
-        temp_formula = str_to_form(list_str)
-        if temp_formula is None:
-            return None
-        return Formula("~", temp_formula)
+        return handle_unary(list_str)
+
     # handle case (X binary_operator Y)
     elif list_str[0][0:1] == "(":
         return handle_parenthesis_case(list_str)
+
     # if its binary operator, return it. binary operator : & or |
     elif is_binary(list_str[0][0:1]) or is_binary(list_str[0][:2]):
         list_str[0] = BINARY_ERR
         return None
+
     # if all of the remaining is legal variable
     elif is_variable(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
         list_str[0] = ""
         return Formula(temp)
+    
     # part of the remaining is legal variable
     elif is_variable(list_str[0][0]):
         for j,char in enumerate(list_str[0]):
