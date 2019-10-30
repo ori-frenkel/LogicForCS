@@ -186,7 +186,10 @@ def str_to_form(list_str):
     # in unary check if it '~'
     if is_unary(list_str[0][0:1]):
         list_str[0] = list_str[0][1:] # removing what we deal with - '~'
-        return Formula("~", str_to_form(list_str))
+        temp_formula = str_to_form(list_str)
+        if temp_formula is None:
+            return None
+        return Formula("~", temp_formula)
     # handle case (X binary_operator Y)
     elif list_str[0][0:1] == "(":
         list_str[0] = list_str[0][1:]
