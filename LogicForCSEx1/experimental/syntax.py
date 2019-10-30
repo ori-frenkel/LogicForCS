@@ -134,7 +134,16 @@ def check_for_none(_input):
     except TypeError:
         return False
 
+
+def is_variable_or_constant(part1):
+    if not (is_variable(part1) or is_constant(part1)):
+        return False
+    return True
+
+
 def str_to_form(list_str):
+    if len(list_str[0]) == 0:
+        return None
     # handle case such as '~'
     if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
         print("---------")
@@ -149,17 +158,22 @@ def str_to_form(list_str):
     # handle case (X binary_operator Y)
     elif list_str[0][0:1] == "(":
         list_str[0] = list_str[0][1:]
-        part1 = str_to_form(list_str)
+        part1 = str_to_form(list_str) # should ve variable or constant
         part2 = str_to_form(list_str)
         part3 = str_to_form(list_str)
         # need to end with ')'
-        if list_str[0][0] != ")":
+        if len(list_str[0]) == 0 or list_str[0][0] != ")":
             return None
         else:
-            list_str[0] = list_str[0][1:]
-        print("remaining is : - ", len(list_str[0]))
+            list_str[0] = list_str[0][1:] # removing the ')'
+#        print("remaining is : - ", len(list_str[0]), " is : ", list_str[0][0])
         if check_for_none(part1) or check_for_none(part2) or check_for_none(part3):
             return None
+        elif not (is_variable_or_constant(str(part1)) or is_variable_or_constant(str(part3))):
+            print("Should be (X operator Y")
+            return None
+        elif not (is_binary(part2) or part2 == "->"):
+            return False
         else:
             return Formula(part2, part1, part3)
     # if its binary operator, return it. binary operator : & or |
@@ -187,7 +201,7 @@ def str_to_form(list_str):
                 temp = list_str[0][:j]
                 list_str[0] = list_str[0][j:]
                 print("temp is : ", temp)
-                print("reaming is : ", list_str[0])
+                print("2reaming is : ", list_str[0])
                 return Formula(temp)
     elif is_constant(list_str[0][0]):
         the_const = list_str[0][0]
@@ -195,7 +209,7 @@ def str_to_form(list_str):
         print("The const is : ", the_const)
         print("The remaining is : ", list_str[0])
         return Formula(the_const)
-    elif list_str[0] == ")":
+    elif list_str[0][0] == ")":
         # list_str[0] = ''
         # print("here")
         # return None
