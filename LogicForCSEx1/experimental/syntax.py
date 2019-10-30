@@ -120,6 +120,7 @@ def in_order_traverse(formula_obj, set_to_store : Set[str], _type):
 def str_to_form(list_str):
     # handle case such as '~'
     if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
+        print("---------")
         return None
         # probably better throwing and catch error
     if is_unary(list_str[0][0:1]):
@@ -129,25 +130,34 @@ def str_to_form(list_str):
         part1 = str_to_form(list_str)
         part2 = str_to_form(list_str)
         part3 = str_to_form(list_str)
-        Formula(part2.root, part1, part3)
+        return Formula(part2, part1, part3)
     elif is_binary(list_str[0][0:1]):
         temp = list_str[0][:1]
+        print("binary is : ", temp)
         list_str[0] = list_str[0][1:]
-        return Formula(temp)
+        print("new one is : ", list_str[0])
+        return temp
     elif list_str[0][:2] == "->":
         temp = list_str[0][:2]
         list_str[0] = list_str[0][2:]
-        return Formula(temp)
+        return temp
     elif is_variable(list_str[0]) or is_constant(list_str[0]):
-        return Formula(list_str[0])
+        temp = list_str[0]
+        list_str[0] = ''
+        return Formula(temp)
     elif is_variable(list_str[0][0]):
         for j,char in enumerate(list_str[0]):
             if j != 0 and not char.isdigit():
                 temp = list_str[0][:j]
                 list_str[0] = list_str[0][j:]
+                print("temp is : ", temp)
+                print("reaming is : ", list_str[0])
                 return Formula(temp)
+    elif list_str[0] == ")":
+        print("here")
+        return
     else:
-        print("ERR")
+        return None
 
 def str_to_formula(s : str):
     # if(is_constant(s) or )
@@ -289,6 +299,8 @@ class Formula:
         """
         # Task 1.4
         list_h = [s]
+        # temp1 = str_to_form(list_h)
+        # print(temp1.root)
         print(str(str_to_form(list_h)))
 
 
