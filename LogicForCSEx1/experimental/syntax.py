@@ -25,15 +25,6 @@ def is_variable(s: str) -> bool:
     """
     return s[0] >= 'p' and s[0] <= 'z' and (len(s) == 1 or s[1:].isdigit())
 
-
-def legal_var_seq(s: str) -> bool:
-    if s[0] < 'p' or s[0] > 'z':
-        return False
-    for num in s[1:]:
-        if not num.isdigit():
-            return False
-    return True
-
 def is_constant(s: str) -> bool:
     """Checks if the given string is a constant.
 
@@ -71,12 +62,10 @@ def is_binary(s: str) -> bool:
 
 # return true if the given string is valid propositional formula
 def is_valid_propositional_formula(s: str) -> bool:
-    i = 0
-    while s[i] == "~":
-        i+=1
-    if s[i] == "(":
-        is_valid_propositional_formula(s[i:])
-    return is_variable_or_constant(s[i:])
+    list_str = [s]
+    if str_to_form(list_str) is None:
+        return False
+    return True
 
 
 def in_order_repr_helper(formula_obj, list_to_return) -> None:
@@ -198,13 +187,13 @@ def str_to_form(list_str):
         list_str[0] = list_str[0][2:]
         return temp
     # if all of the remaining is legal variable
-    elif legal_var_seq(list_str[0]) or is_constant(list_str[0]):
+    elif is_variable(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
         list_str[0] = ""
         print("remaining is nothing - ''")
         return Formula(temp)
     # part of the remaining is legal variable
-    elif legal_var_seq(list_str[0][0]):
+    elif is_variable(list_str[0][0]):
         for j,char in enumerate(list_str[0]):
             if j != 0 and not char.isdigit():
                 temp = list_str[0][:j]
