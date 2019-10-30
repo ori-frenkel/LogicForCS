@@ -25,6 +25,15 @@ def is_variable(s: str) -> bool:
     """
     return s[0] >= 'p' and s[0] <= 'z' and (len(s) == 1 or s[1:].isdigit())
 
+
+def legal_var_seq(s: str) -> bool:
+    if s[0] < 'p' or s[0] > 'z':
+        return False
+    for num in s[1:]:
+        if not num.isdigit():
+            return False
+    return True
+
 def is_constant(s: str) -> bool:
     """Checks if the given string is a constant.
 
@@ -117,35 +126,54 @@ def in_order_traverse(formula_obj, set_to_store : Set[str], _type):
     except AttributeError:
         pass
 
+# check if the given input is None
+def check_for_none(_input):
+    try:
+        if _input is None:
+            return True
+    except TypeError:
+        return False
+
 def str_to_form(list_str):
     # handle case such as '~'
     if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
         print("---------")
         return None
-        # probably better throwing and catch error
+    if list_str[0] == '':
+        print("2 in......................2")
+        return None
+    # in unary check if it '~'
     if is_unary(list_str[0][0:1]):
+        list_str[0] = list_str[0][1:] # removing what we deal with - '~'
         return Formula("~", str_to_form(list_str[0][1:]))
+    # handle case (X binary_operator Y)
     elif list_str[0][0:1] == "(":
         list_str[0] = list_str[0][1:]
         part1 = str_to_form(list_str)
         part2 = str_to_form(list_str)
         part3 = str_to_form(list_str)
-        return Formula(part2, part1, part3)
+        if check_for_none(part1) or check_for_none(part2) or check_for_none(part3):
+            return None
+        else:
+            return Formula(part2, part1, part3)
+    # if its binary operator, return it. binary operator : & or |
     elif is_binary(list_str[0][0:1]):
         temp = list_str[0][:1]
         print("binary is : ", temp)
         list_str[0] = list_str[0][1:]
         print("new one is : ", list_str[0])
         return temp
-    elif list_str[0][:2] == "->":
+    # one more binary operator : ->
+    elif is_binary(list_str[0][:2]):
         temp = list_str[0][:2]
         list_str[0] = list_str[0][2:]
         return temp
-    elif is_variable(list_str[0]) or is_constant(list_str[0]):
+    # if all of the remaining is legal variable
+    elif legal_var_seq(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
-        list_str[0] = ''
+        list_str[0] = ""
         return Formula(temp)
-    elif is_variable(list_str[0][0]):
+    elif legal_var_seq(list_str[0][0]):
         for j,char in enumerate(list_str[0]):
             if j != 0 and not char.isdigit():
                 temp = list_str[0][:j]
@@ -154,9 +182,12 @@ def str_to_form(list_str):
                 print("reaming is : ", list_str[0])
                 return Formula(temp)
     elif list_str[0] == ")":
-        print("here")
-        return
+        # list_str[0] = ''
+        # print("here")
+        # return None
+        list_str[0] = list_str[0][1:]
     else:
+        print("here None")
         return None
 
 def str_to_formula(s : str):
@@ -301,6 +332,8 @@ class Formula:
         list_h = [s]
         # temp1 = str_to_form(list_h)
         # print(temp1.root)
+        # first would need to check that the number of
+        #  '(' equals to number of ')'
         print(str(str_to_form(list_h)))
 
 
