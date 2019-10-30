@@ -152,6 +152,12 @@ def str_to_form(list_str):
         part1 = str_to_form(list_str)
         part2 = str_to_form(list_str)
         part3 = str_to_form(list_str)
+        # need to end with ')'
+        if list_str[0][0] != ")":
+            return None
+        else:
+            list_str[0] = list_str[0][1:]
+        print("remaining is : - ", len(list_str[0]))
         if check_for_none(part1) or check_for_none(part2) or check_for_none(part3):
             return None
         else:
@@ -193,6 +199,7 @@ def str_to_form(list_str):
         # list_str[0] = ''
         # print("here")
         # return None
+        #todo : maybe a case where ends with )
         list_str[0] = list_str[0][1:]
     else:
         print("here None")
