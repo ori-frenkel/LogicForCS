@@ -12,6 +12,23 @@ from logic_utils import frozen
 
 VAR = 1
 OPERATOR = 2
+EMPTY_INPUT_ERR = "The given string in empty"
+UNARY_FOLLOWED_BY_NOTHING_ERR = "unary must be followed by valid" \
+                                "propositional formulae "
+CLOSED_PARENTHESIS_MISSING_ERR = "You need to close each '(' by ')'"
+
+PROPOSITIONAL_FORMULAE_ERR = "(X Binary operator Y) X and Y must be valid "\
+                              "propositional formulae "
+
+OPERATOR_ERR = "(X operator Y) operator must be a binary operator" \
+                " meaning & or | or ->"
+
+BINARY_ERR = "You cant use binary operation in such way, the only allowed " \
+             "way is (X Binary_Operator Y) where X and Y"\
+             "valid propositional formulae"
+
+VAR_ERR = "Illegal variable"
+
 
 def is_variable(s: str) -> bool:
     """Checks if the given string is an atomic proposition.
@@ -138,44 +155,9 @@ def is_variable_or_constant(s:str) -> bool:
         return False
     return True
 
-
-def str_to_form(list_str):
-    if len(list_str[0]) == 0:
-        return None
-    # handle case such as '~'
-    if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
-        print("---------")
-        return None
-    if list_str[0] == '':
-        print("2 in......................2")
-        return None
-    # in unary check if it '~'
-    if is_unary(list_str[0][0:1]):
-        list_str[0] = list_str[0][1:] # removing what we deal with - '~'
-        return Formula("~", str_to_form(list_str))
-    # handle case (X binary_operator Y)
-    elif list_str[0][0:1] == "(":
-        list_str[0] = list_str[0][1:]
-        part1 = str_to_form(list_str) # should ve variable or constant
-        part2 = str_to_form(list_str)
-        part3 = str_to_form(list_str)
-        # need to end with ')'
-        if len(list_str[0]) == 0 or list_str[0][0] != ")":
-            return None
-        else:
-            list_str[0] = list_str[0][1:] # removing the ')'
-        # print("remaining is : - ", len(list_str[0]), " is : ", list_str[0][0])
-        if check_for_none(part1) or check_for_none(part2) or check_for_none(part3):
-            return None
-        elif not (is_valid_propositional_formula(str(part1)) and is_valid_propositional_formula(str(part3))):
-            print("Should be (X operator Y, part 1 : ", str(part1), " |||part 3 : ", part3)
-            return None
-        elif not (is_binary(part2) or part2 == "->"):
-            return None
-        else:
-            return Formula(part2, part1, part3)
+def handle_binary(list_str):
     # if its binary operator, return it. binary operator : & or |
-    elif is_binary(list_str[0][0:1]):
+    if is_binary(list_str[0][0:1]):
         temp = list_str[0][:1]
         print("binary is : ", temp)
         list_str[0] = list_str[0][1:]
@@ -186,6 +168,52 @@ def str_to_form(list_str):
         temp = list_str[0][:2]
         list_str[0] = list_str[0][2:]
         return temp
+    # in case of failure, and its not a binary
+    return None
+
+def str_to_form(list_str):
+    if len(list_str[0]) == 0 or list_str[0] == '':
+        list_str[0] = EMPTY_INPUT_ERR
+        print("None7")
+        return None
+    # handle case such as '~'
+    if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
+        print("---------")
+        list_str[0] = UNARY_FOLLOWED_BY_NOTHING_ERR
+        print("None5")
+        return None
+    # in unary check if it '~'
+    if is_unary(list_str[0][0:1]):
+        list_str[0] = list_str[0][1:] # removing what we deal with - '~'
+        return Formula("~", str_to_form(list_str))
+    # handle case (X binary_operator Y)
+    elif list_str[0][0:1] == "(":
+        list_str[0] = list_str[0][1:]
+        part1 = str_to_form(list_str) # should ve variable or constant
+        part2 = handle_binary(list_str)
+        part3 = str_to_form(list_str)
+        if part1 is None or not (is_valid_propositional_formula(str(part1))):
+            list_str[0] = PROPOSITIONAL_FORMULAE_ERR
+            return None
+        elif part2 is None :
+            list_str[0] = OPERATOR_ERR
+            return None
+        elif part3 is None or not is_valid_propositional_formula(str(part3)):
+            list_str[0] = PROPOSITIONAL_FORMULAE_ERR
+            return None
+        # need to end with ')'
+        if len(list_str[0]) == 0 or list_str[0][0] != ")":
+            list_str[0] = CLOSED_PARENTHESIS_MISSING_ERR
+            print("None4")
+            return None
+        else:
+            list_str[0] = list_str[0][1:] # removing the ')'
+
+        return Formula(part2, part1, part3)
+    # if its binary operator, return it. binary operator : & or |
+    elif is_binary(list_str[0][0:1]):
+        list_str[0] = BINARY_ERR
+        return None
     # if all of the remaining is legal variable
     elif is_variable(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
@@ -215,6 +243,8 @@ def str_to_form(list_str):
         list_str[0] = list_str[0][1:]
     else:
         print("here None")
+        list_str[0] = VAR_ERR
+        print("None8")
         return None
 
 def str_to_formula(s : str):
@@ -362,6 +392,7 @@ class Formula:
         # first would need to check that the number of
         #  '(' equals to number of ')'
         print(str(str_to_form(list_h)))
+        print("The remaining is : ", list_h[0])
 
 
     @staticmethod
@@ -375,6 +406,7 @@ class Formula:
             ``True`` if the given string is a valid standard string
             representation of a formula, ``False`` otherwise.
         """
+        Formula.parse_prefix(s)[0]
         # Task 1.5
         
     @staticmethod
