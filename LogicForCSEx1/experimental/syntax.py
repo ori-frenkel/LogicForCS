@@ -160,9 +160,9 @@ def handle_binary(list_str):
     # if its binary operator, return it. binary operator : & or |
     if is_binary(list_str[0][0:1]):
         temp = list_str[0][:1]
-        print("binary is : ", temp)
+        # print("binary is : ", temp)
         list_str[0] = list_str[0][1:]
-        print("new one is : ", list_str[0])
+        # print("new one is : ", list_str[0])
         return temp
     # one more binary operator : ->
     elif is_binary(list_str[0][:2]):
@@ -172,16 +172,37 @@ def handle_binary(list_str):
     # in case of failure, and its not a binary
     return None
 
+# handle the case where the string start with '('
+def handle_parenthesis_case(list_str):
+    list_str[0] = list_str[0][1:] # removing the '(' from the string
+    part1 = str_to_form(list_str)
+    part2 = handle_binary(list_str) # should be binary operator
+    part3 = str_to_form(list_str)
+    if part1 is None or not (is_valid_propositional_formula(str(part1))):
+        list_str[0] = PROPOSITIONAL_FORMULAE_ERR
+        return None
+    elif part2 is None:
+        list_str[0] = OPERATOR_ERR
+        return None
+    elif part3 is None or not is_valid_propositional_formula(str(part3)):
+        list_str[0] = PROPOSITIONAL_FORMULAE_ERR
+        return None
+    # need to end with ')'
+    if len(list_str[0]) == 0 or list_str[0][0] != ")":
+        list_str[0] = CLOSED_PARENTHESIS_MISSING_ERR
+        return None
+    else:
+        list_str[0] = list_str[0][1:]  # removing the ')'
+
+    return Formula(part2, part1, part3)
+
 def str_to_form(list_str):
     if len(list_str[0]) == 0 or list_str[0] == '':
         list_str[0] = EMPTY_INPUT_ERR
-        print("None7")
         return None
     # handle case such as '~'
     if is_unary(list_str[0][0:1]) and (list_str[0][1:] == '' or list_str[0][1:] is None):
-        print("---------")
         list_str[0] = UNARY_FOLLOWED_BY_NOTHING_ERR
-        print("None5")
         return None
     # in unary check if it '~'
     if is_unary(list_str[0][0:1]):
@@ -192,37 +213,15 @@ def str_to_form(list_str):
         return Formula("~", temp_formula)
     # handle case (X binary_operator Y)
     elif list_str[0][0:1] == "(":
-        list_str[0] = list_str[0][1:]
-        part1 = str_to_form(list_str) # should ve variable or constant
-        part2 = handle_binary(list_str)
-        part3 = str_to_form(list_str)
-        if part1 is None or not (is_valid_propositional_formula(str(part1))):
-            list_str[0] = PROPOSITIONAL_FORMULAE_ERR
-            return None
-        elif part2 is None :
-            list_str[0] = OPERATOR_ERR
-            return None
-        elif part3 is None or not is_valid_propositional_formula(str(part3)):
-            list_str[0] = PROPOSITIONAL_FORMULAE_ERR
-            return None
-        # need to end with ')'
-        if len(list_str[0]) == 0 or list_str[0][0] != ")":
-            list_str[0] = CLOSED_PARENTHESIS_MISSING_ERR
-            print("None4")
-            return None
-        else:
-            list_str[0] = list_str[0][1:] # removing the ')'
-
-        return Formula(part2, part1, part3)
+        return handle_parenthesis_case(list_str)
     # if its binary operator, return it. binary operator : & or |
-    elif is_binary(list_str[0][0:1]):
+    elif is_binary(list_str[0][0:1]) or is_binary(list_str[0][:2]):
         list_str[0] = BINARY_ERR
         return None
     # if all of the remaining is legal variable
     elif is_variable(list_str[0]) or is_constant(list_str[0]):
         temp = list_str[0]
         list_str[0] = ""
-        print("remaining is nothing - ''")
         return Formula(temp)
     # part of the remaining is legal variable
     elif is_variable(list_str[0][0]):
@@ -230,48 +229,16 @@ def str_to_form(list_str):
             if j != 0 and not char.isdigit():
                 temp = list_str[0][:j]
                 list_str[0] = list_str[0][j:]
-                print("temp is : ", temp)
-                print("2reaming is : ", list_str[0])
                 return Formula(temp)
     elif is_constant(list_str[0][0]):
         the_const = list_str[0][0]
         list_str[0] = list_str[0][1:]
-        print("The const is : ", the_const)
-        print("The remaining is : ", list_str[0])
         return Formula(the_const)
     elif list_str[0][0] == ")":
-        # list_str[0] = ''
-        # print("here")
-        # return None
-        #todo : maybe a case where ends with )
         list_str[0] = list_str[0][1:]
     else:
-        print("here None")
         list_str[0] = VAR_ERR
-        print("None8")
         return None
-
-def str_to_formula(s : str):
-    # if(is_constant(s) or )
-    if is_unary(s[0]):
-        return Formula("~", str_to_formula(s[1:]))
-    elif s[0] in ["(", ")"]:
-        index = 0
-        index1 = 0
-        for j,char in enumerate(s):
-            if j == 0 and is_constant(char):
-                index = 1
-                break
-            elif j == 0 and not char.isalpha():
-                raise ValueError('A very specific bad thing happened.1')
-            elif j != 0 and not char.isdigit():
-                index = j - 1
-                break
-        if s[index + 1: index + 2] not in ["|", "&"]:
-            index1 = index + 3
-        if s[index:index1] not in ["->"]:
-            raise ValueError('A very specific bad thing happened.2')
-        Formula(str_to_formula(s[:index]), str_to_formula(s[index + 1:index1]), str_to_formula(s[index1 + 1:]))
 
 @frozen
 class Formula:
@@ -395,8 +362,9 @@ class Formula:
         # print(temp1.root)
         # first would need to check that the number of
         #  '(' equals to number of ')'
-        print(str(str_to_form(list_h)))
-        print("The remaining is : ", list_h[0])
+        # print(str(str_to_form(list_h)))
+        # print("The remaining is : ", list_h[0])
+        return (str_to_form(list_h), list_h[0])
 
 
     @staticmethod
