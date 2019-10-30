@@ -399,7 +399,8 @@ class Formula:
         """
         assert Formula.is_formula(s)
         # Task 1.6
-
+        parsed_ver = Formula.parse_prefix(s)
+        return parsed_ver[0]
 
 # Optional tasks for Chapter 1
 
