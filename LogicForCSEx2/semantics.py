@@ -7,6 +7,8 @@
 
 from typing import AbstractSet, Iterable, Iterator, List, Mapping
 
+import itertools
+
 from propositions.syntax import *
 from propositions.proofs import *
 
@@ -88,6 +90,15 @@ def evaluate(formula: Formula, model: Model) -> bool:
         assert(is_binary(formula.root))
         return evaluate_binary_operation_handler(formula, model)
 
+def temp(variables : list, i : int, toReturn : list):
+    tmp = list()
+    for j in range(len(variables)):
+        tmp.append(variables[j] + " : " + False)
+    if i == (len(variables) - 1):
+        return tmp
+    else:
+        tmp[i] = variables[i] + " : " + True
+
 def all_models(variables: List[str]) -> Iterable[Model]:
     """Calculates all possible models over the given variables.
 
@@ -103,9 +114,25 @@ def all_models(variables: List[str]) -> Iterable[Model]:
         >>> list(all_models(['p', 'q']))
         [{'p': False, 'q': False}, {'p': False, 'q': True}, {'p': True, 'q': False}, {'p': True, 'q': True}]
     """
-    for v in variables:
-        assert is_variable(v)
+    # for v in variables:
+    #     assert is_variable(v)
     # Task 2.2
+
+    to_return_lst = list()
+    to_return = itertools.product((False, True), repeat=len(variables))
+    for possibility in to_return:
+        my_dict = {}
+        for index,var in enumerate(sorted(variables)):
+            my_dict.update({var : possibility[index]})
+        to_return_lst.append(my_dict.copy())
+        # print(my_dict)
+        my_dict.clear()
+    # print(to_return_lst)
+    return to_return_lst
+
+
+
+
 
 def truth_values(formula: Formula, models: Iterable[Model]) -> Iterable[bool]:
     """Calculates the truth value of the given formula in each of the given
