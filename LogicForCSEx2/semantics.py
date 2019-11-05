@@ -309,6 +309,26 @@ def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
     """
     assert len(variables) > 0
     # Task 2.7
+    first = True
+    final_formula = ""
+    formula_local = ""
+    for model in all_models(variables):
+        if not first:
+            final_formula = "(" + final_formula + "|"
+        for bool_result in values:
+            formula_local = str(synthesize_for_model(model))
+            if not bool_result:
+                formula_local = "~" + formula_local
+        final_formula += formula_local
+        if not first:
+            final_formula += ")"
+
+    # creating a list, that list[0] contain the string, because that what
+    # list_to_string function is required
+    list_of_string = list()
+    list_of_string.append(final_formula)
+    return str_to_form(list_of_string)
+
 
 # Tasks for Chapter 4
 
