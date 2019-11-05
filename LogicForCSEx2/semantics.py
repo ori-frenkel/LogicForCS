@@ -132,7 +132,7 @@ def truth_values(formula: Formula, models: Iterable[Model]) -> Iterable[bool]:
 
     Parameters:
         formula: formula to calculate the truth value of.
-        model: iterable over models to calculate the truth value in.
+        models: iterable over models to calculate the truth value in.
 
     Returns:
         An iterable over the respective truth values of the given formula in
@@ -162,6 +162,38 @@ def print_truth_table(formula: Formula) -> None:
         | T | T   | F        |
     """
     # Task 2.4
+    """
+    headers = list()
+    table = list()
+    result_lst = list()
+    index = 0
+    all_models_local = all_models(list(formula.variables()))
+    for result in truth_values(formula, all_models_local):
+        if result:
+            result_lst.append("T")
+        else:
+            result_lst.append("F")
+    
+    temp_lst = list()
+    for mod_dict in all_models_local:
+        for var in headers:
+            if mod_dict.get(var):
+                temp_lst.append("T")
+            else:
+                temp_lst.append("F")
+        # adding the content of result
+        temp_lst.append(result_lst[index])
+        index += 1
+        table.append(temp_lst.copy())
+        temp_lst.clear()
+    from pip._internal.commands.list import tabulate
+
+    for var in list(formula.variables()):
+        headers.append(var)
+    headers.append(str(formula)) # the result
+    headers = sorted(headers)
+    print(tabulate(table, headers, tablefmt="github"))
+    """
 
 def is_tautology(formula: Formula) -> bool:
     """Checks if the given formula is a tautology.
@@ -221,8 +253,36 @@ def synthesize_for_model(model: Model) -> Formula:
     Returns:
         The synthesized formula.
     """
+    # the idea is -> first step put the var or ~var
+    # than each time do - > add '(' at first
+    # '(' + the_string '&' + the_new_string + ')'
+    """
+    We solve this equestion by using CNF.
+    every var that is false we doing ~var, and connecting all the var by '&'
+    and this will provide us with formula which is true just 
+    for the given model
+    """
     assert is_model(model)
     # Task 2.6
+    first = True
+    str_formula = ""
+    for key,value in model.items():
+        if first:
+            first = False
+            if not value:
+                str_formula += '~'
+            str_formula += key
+        else:
+            str_formula = "(" + str_formula + "&"
+            if not value:
+                str_formula += '~'
+            str_formula += key
+            str_formula += ")"
+    # creating a list, that list[0] contain the string, because that what
+    # list_to_string function is required
+    list_of_string = list()
+    list_of_string.append(str_formula)
+    return str_to_form(list_of_string)
 
 def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
     """Synthesizes a propositional formula in DNF over the given variables, from
