@@ -38,6 +38,28 @@ def variables(model: Model) -> AbstractSet[str]:
     """
     assert is_model(model)
     return model.keys()
+"""
+handle the case that we need to evaluate (X binary_operation Y)
+"""
+def evaluate_binary_operation_handler(formula: Formula, model: Model) -> bool:
+    first = evaluate(formula.first, model) # the X
+    second = evaluate(formula.second, model) # the Y
+    if formula.root == '&':
+        if first is False or second is False:
+            return False
+        return True
+    elif formula.root == '|':
+        if first is True or second is True:
+            return True
+        return False
+    else:  # must be '->'
+        # there are 2 cases where '->' return true
+        # 1. False -> True/False
+        # 2. True -> True
+        assert (formula.root == '->')
+        if first is False or second is True:
+            return True
+        return False
 
 def evaluate(formula: Formula, model: Model) -> bool:
     """Calculates the truth value of the given formula in the given model.
@@ -64,24 +86,7 @@ def evaluate(formula: Formula, model: Model) -> bool:
     else:
         # if we got here, than it must be binary operation
         assert(is_binary(formula.root))
-        first = evaluate(formula.first, model)
-        second = evaluate(formula.second, model)
-        if formula.root == '&':
-            if first is False or second is False:
-                return False
-            return True
-        elif formula.root == '|':
-            if first is True or second is True:
-                return True
-            return False
-        else: # must be '->'
-            # there are 2 cases where '->' return true
-            # 1. False -> True/False
-            # 2. True -> True
-            assert (formula.root == '->')
-            if first is False or second is True:
-                return True
-            return False
+        return evaluate_binary_operation_handler(formula, model)
 
 def all_models(variables: List[str]) -> Iterable[Model]:
     """Calculates all possible models over the given variables.
