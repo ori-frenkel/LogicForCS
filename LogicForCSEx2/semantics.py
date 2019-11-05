@@ -90,14 +90,6 @@ def evaluate(formula: Formula, model: Model) -> bool:
         assert(is_binary(formula.root))
         return evaluate_binary_operation_handler(formula, model)
 
-def temp(variables : list, i : int, toReturn : list):
-    tmp = list()
-    for j in range(len(variables)):
-        tmp.append(variables[j] + " : " + False)
-    if i == (len(variables) - 1):
-        return tmp
-    else:
-        tmp[i] = variables[i] + " : " + True
 
 def all_models(variables: List[str]) -> Iterable[Model]:
     """Calculates all possible models over the given variables.
@@ -147,6 +139,11 @@ def truth_values(formula: Formula, models: Iterable[Model]) -> Iterable[bool]:
         each of the given models, in the order of the given models.
     """
     # Task 2.3
+    # all_models_local = all_models(list(formula.variables()))
+    to_return = list()
+    for l_model in models:
+        to_return.append(evaluate(formula, l_model))
+    return to_return
 
 def print_truth_table(formula: Formula) -> None:
     """Prints the truth table of the given formula, with variable-name columns
@@ -175,7 +172,14 @@ def is_tautology(formula: Formula) -> bool:
     Returns:
         ``True`` if the given formula is a tautology, ``False`` otherwise.
     """
+    # A Formula is said to be a tautology if it gets the value True
+    # in all models.
     # Task 2.5a
+    all_models_local = all_models(list(formula.variables()))
+    for bool_val in truth_values(formula, all_models_local):
+        if not bool_val:
+            return False
+    return True
 
 def is_contradiction(formula: Formula) -> bool:
     """Checks if the given formula is a contradiction.
@@ -187,6 +191,7 @@ def is_contradiction(formula: Formula) -> bool:
         ``True`` if the given formula is a contradiction, ``False`` otherwise.
     """
     # Task 2.5b
+    return not is_satisfiable(formula)
 
 def is_satisfiable(formula: Formula) -> bool:
     """Checks if the given formula is satisfiable.
@@ -197,7 +202,13 @@ def is_satisfiable(formula: Formula) -> bool:
     Returns:
         ``True`` if the given formula is satisfiable, ``False`` otherwise.
     """
+    # satisfiable -  if it gets the value True at least once
     # Task 2.5c
+    all_models_local = all_models(list(formula.variables()))
+    for bool_val in truth_values(formula, all_models_local):
+        if bool_val:
+            return True
+    return False
 
 def synthesize_for_model(model: Model) -> Formula:
     """Synthesizes a propositional formula in the form of a single clause that
