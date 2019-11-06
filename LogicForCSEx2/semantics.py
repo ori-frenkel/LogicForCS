@@ -14,6 +14,7 @@ from propositions.proofs import *
 
 Model = Mapping[str, bool]
 
+
 def is_model(model: Model) -> bool:
     """Checks if the given dictionary a model over some set of variables.
 
@@ -29,6 +30,7 @@ def is_model(model: Model) -> bool:
             return False
     return True
 
+
 def variables(model: Model) -> AbstractSet[str]:
     """Finds all variables over which the given model is defined.
 
@@ -40,12 +42,16 @@ def variables(model: Model) -> AbstractSet[str]:
     """
     assert is_model(model)
     return model.keys()
+
+
 """
 handle the case that we need to evaluate (X binary_operation Y)
 """
+
+
 def evaluate_binary_operation_handler(formula: Formula, model: Model) -> bool:
-    first = evaluate(formula.first, model) # the X
-    second = evaluate(formula.second, model) # the Y
+    first = evaluate(formula.first, model)  # the X
+    second = evaluate(formula.second, model)  # the Y
     if formula.root == '&':
         if first is False or second is False:
             return False
@@ -62,6 +68,7 @@ def evaluate_binary_operation_handler(formula: Formula, model: Model) -> bool:
         if first is False or second is True:
             return True
         return False
+
 
 def evaluate(formula: Formula, model: Model) -> bool:
     """Calculates the truth value of the given formula in the given model.
@@ -82,16 +89,16 @@ def evaluate(formula: Formula, model: Model) -> bool:
     elif is_constant(formula.root):
         if formula.root == 'T':
             return True
-        return False # if its not 'T' than it must be 'F'
+        return False  # if its not 'T' than it must be 'F'
     elif is_variable(formula.root):
         return model.get(formula.root)
     else:
         # if we got here, than it must be binary operation
-        assert(is_binary(formula.root))
+        assert (is_binary(formula.root))
         return evaluate_binary_operation_handler(formula, model)
 
 
-def all_models(variables: List[str]) -> Iterable[Model]:
+def all_models(variables: List[str], sorted_bool = False) -> Iterable[Model]:
     """Calculates all possible models over the given variables.
 
     Parameters:
@@ -109,21 +116,19 @@ def all_models(variables: List[str]) -> Iterable[Model]:
     # for v in variables:
     #     assert is_variable(v)
     # Task 2.2
-
+    if sorted_bool:
+        variables = sorted(variables)
     to_return_lst = list()
     to_return = itertools.product((False, True), repeat=len(variables))
     for possibility in to_return:
         my_dict = {}
-        for index,var in enumerate(variables):
-            my_dict.update({var : possibility[index]})
+        for index, var in enumerate(variables):
+            my_dict.update({var: possibility[index]})
         to_return_lst.append(my_dict.copy())
         # print(my_dict)
         my_dict.clear()
     # print(to_return_lst)
     return to_return_lst
-
-
-
 
 
 def truth_values(formula: Formula, models: Iterable[Model]) -> Iterable[bool]:
@@ -145,6 +150,7 @@ def truth_values(formula: Formula, models: Iterable[Model]) -> Iterable[bool]:
         to_return.append(evaluate(formula, l_model))
     return to_return
 
+
 def print_truth_table(formula: Formula) -> None:
     """Prints the truth table of the given formula, with variable-name columns
     sorted alphabetically.
@@ -162,18 +168,21 @@ def print_truth_table(formula: Formula) -> None:
         | T | T   | F        |
     """
     # Task 2.4
-    """
+
     headers = list()
+    for var in list(formula.variables()):
+        headers.append(var)
+    headers = sorted(headers)  # variable names sorted alphabetic
     table = list()
     result_lst = list()
     index = 0
-    all_models_local = all_models(list(formula.variables()))
+    all_models_local = all_models(list(formula.variables()), True)
     for result in truth_values(formula, all_models_local):
         if result:
             result_lst.append("T")
         else:
             result_lst.append("F")
-    
+
     temp_lst = list()
     for mod_dict in all_models_local:
         for var in headers:
@@ -181,19 +190,20 @@ def print_truth_table(formula: Formula) -> None:
                 temp_lst.append("T")
             else:
                 temp_lst.append("F")
+
         # adding the content of result
         temp_lst.append(result_lst[index])
         index += 1
         table.append(temp_lst.copy())
         temp_lst.clear()
-    from pip._internal.commands.list import tabulate
 
-    for var in list(formula.variables()):
-        headers.append(var)
-    headers.append(str(formula)) # the result
-    headers = sorted(headers)
-    print(tabulate(table, headers, tablefmt="github"))
-    """
+    # for var in list(formula.variables()):
+    #     headers.append(var)
+    headers.append(str(formula))  # the result
+    # headers = sorted(headers)
+    from tabulate import tabulate
+    print(tabulate(table, headers, tablefmt="orgtbl").replace("+", "|"))
+
 
 def is_tautology(formula: Formula) -> bool:
     """Checks if the given formula is a tautology.
@@ -213,6 +223,7 @@ def is_tautology(formula: Formula) -> bool:
             return False
     return True
 
+
 def is_contradiction(formula: Formula) -> bool:
     """Checks if the given formula is a contradiction.
 
@@ -224,6 +235,7 @@ def is_contradiction(formula: Formula) -> bool:
     """
     # Task 2.5b
     return not is_satisfiable(formula)
+
 
 def is_satisfiable(formula: Formula) -> bool:
     """Checks if the given formula is satisfiable.
@@ -241,6 +253,7 @@ def is_satisfiable(formula: Formula) -> bool:
         if bool_val:
             return True
     return False
+
 
 def synthesize_for_model(model: Model) -> Formula:
     """Synthesizes a propositional formula in the form of a single clause that
@@ -266,7 +279,7 @@ def synthesize_for_model(model: Model) -> Formula:
     # Task 2.6
     first = True
     str_formula = ""
-    for key,value in model.items():
+    for key, value in model.items():
         if first:
             first = False
             if not value:
@@ -283,6 +296,7 @@ def synthesize_for_model(model: Model) -> Formula:
     list_of_string = list()
     list_of_string.append(str_formula)
     return str_to_form(list_of_string)
+
 
 def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
     """Synthesizes a propositional formula in DNF over the given variables, from
@@ -345,6 +359,7 @@ def evaluate_inference(rule: InferenceRule, model: Model) -> bool:
     """
     assert is_model(model)
     # Task 4.2
+
 
 def is_sound_inference(rule: InferenceRule) -> bool:
     """Checks if the given inference rule is sound, i.e., whether its
