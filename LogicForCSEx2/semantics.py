@@ -114,7 +114,7 @@ def all_models(variables: List[str]) -> Iterable[Model]:
     to_return = itertools.product((False, True), repeat=len(variables))
     for possibility in to_return:
         my_dict = {}
-        for index,var in enumerate(sorted(variables)):
+        for index,var in enumerate(variables):
             my_dict.update({var : possibility[index]})
         to_return_lst.append(my_dict.copy())
         # print(my_dict)
