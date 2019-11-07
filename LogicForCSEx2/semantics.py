@@ -331,7 +331,6 @@ def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
         False
     """
     assert len(variables) > 0
-    # TODO: change set to Order Set
     # Task 2.7
     first = True
     final_formula = ""
