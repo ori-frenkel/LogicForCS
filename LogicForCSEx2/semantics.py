@@ -125,9 +125,7 @@ def all_models(variables: List[str], sorted_bool = False) -> Iterable[Model]:
         for index, var in enumerate(variables):
             my_dict.update({var: possibility[index]})
         to_return_lst.append(my_dict.copy())
-        # print(my_dict)
         my_dict.clear()
-    # print(to_return_lst)
     return to_return_lst
 
 
@@ -297,6 +295,11 @@ def synthesize_for_model(model: Model) -> Formula:
     list_of_string.append(str_formula)
     return str_to_form(list_of_string)
 
+def edge_case(values):
+    for val in values:
+        if val is True:
+            return False
+    return True
 
 def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
     """Synthesizes a propositional formula in DNF over the given variables, from
@@ -322,21 +325,41 @@ def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
         False
     """
     assert len(variables) > 0
+    # TODO: change set to Order Set
     # Task 2.7
     first = True
     final_formula = ""
     formula_local = ""
-    for model in all_models(variables):
+    # ((x, y) for x in A for y in B)
+    for model, bool_val in zip(all_models(variables),values):
+        if edge_case(values):
+            # return formula which always False
+            edge_case_str = "(" + variables[0] + "&" + "~" + variables[0] + ")"
+            list_of_string = list()
+            list_of_string.append(edge_case_str)
+            return str_to_form(list_of_string)
+
+        # if its False, there is no need to add to the formula,
+        # it already give False to anything that wasn't before classified
+        # as true, if it true, than we need to add to the returned formula
+        if not bool_val:
+            continue
         if not first:
             final_formula = "(" + final_formula + "|"
-        for bool_result in values:
-            formula_local = str(synthesize_for_model(model))
-            if not bool_result:
-                formula_local = "~" + formula_local
+        # return formula that return first for the model
+
+        formula_local = str(synthesize_for_model(model))
+
+        # if we need that for this model to return False
+        # if not bool_val:
+        #     formula_local = "~" + formula_local
         final_formula += formula_local
         if not first:
             final_formula += ")"
+        if first:
+            first = False
 
+    final_formula = final_formula.replace("~~", "")
     # creating a list, that list[0] contain the string, because that what
     # list_to_string function is required
     list_of_string = list()
