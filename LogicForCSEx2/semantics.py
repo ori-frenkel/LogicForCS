@@ -112,6 +112,7 @@ def all_models(variables: List[str], sorted_bool=False) -> Iterable[Model]:
     Examples:
         >>> list(all_models(['p', 'q']))
         [{'p': False, 'q': False}, {'p': False, 'q': True}, {'p': True, 'q': False}, {'p': True, 'q': True}]
+        :param sorted_bool:
     """
     # for v in variables:
     #     assert is_variable(v)
