@@ -98,7 +98,7 @@ def evaluate(formula: Formula, model: Model) -> bool:
         return evaluate_binary_operation_handler(formula, model)
 
 
-def all_models(variables: List[str], sorted_bool = False) -> Iterable[Model]:
+def all_models(variables: List[str], sorted_bool=False) -> Iterable[Model]:
     """Calculates all possible models over the given variables.
 
     Parameters:
@@ -268,7 +268,7 @@ def synthesize_for_model(model: Model) -> Formula:
     # than each time do - > add '(' at first
     # '(' + the_string '&' + the_new_string + ')'
     """
-    We solve this equestion by using CNF.
+    We solve this equation by using CNF.
     every var that is false we doing ~var, and connecting all the var by '&'
     and this will provide us with formula which is true just 
     for the given model
@@ -295,11 +295,16 @@ def synthesize_for_model(model: Model) -> Formula:
     list_of_string.append(str_formula)
     return str_to_form(list_of_string)
 
+
 def edge_case(values):
+    """
+    Edge case where all of the values are False (in function synthesize)
+    """
     for val in values:
         if val is True:
             return False
     return True
+
 
 def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
     """Synthesizes a propositional formula in DNF over the given variables, from
@@ -331,7 +336,7 @@ def synthesize(variables: List[str], values: Iterable[bool]) -> Formula:
     final_formula = ""
     formula_local = ""
     # ((x, y) for x in A for y in B)
-    for model, bool_val in zip(all_models(variables),values):
+    for model, bool_val in zip(all_models(variables), values):
         if edge_case(values):
             # return formula which always False
             edge_case_str = "(" + variables[0] + "&" + "~" + variables[0] + ")"
