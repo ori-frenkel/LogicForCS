@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Mapping, Optional, Set, Tuple, Union
 
 from logic_utils import frozen
+import re
 
 VAR = 1
 OPERATOR = 2
@@ -450,6 +451,16 @@ class Formula:
         for variable in substitution_map:
             assert is_variable(variable)
         # Task 3.3
+        if len(substitution_map) == 0:
+            return self
+        else:
+            rep = dict((re.escape(k), str(v)) for k, v in substitution_map.items())
+            pattern = re.compile("|".join(rep.keys()))
+            text = pattern.sub(lambda m: rep[re.escape(m.group(0))], str(self))
+            print(text)
+            lst = list()
+            lst.append(text)
+            return str_to_form(lst)
 
     def substitute_operators(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
