@@ -1,1 +1,11 @@
 
+        if len(substitution_map) == 0:
+            return self
+        else:
+            rep = dict((re.escape(k), str(v)) for k, v in substitution_map.items())
+            pattern = re.compile("|".join(rep.keys()))
+            text = pattern.sub(lambda m: rep[re.escape(m.group(0))], str(self))
+            print(text)
+            lst = list()
+            lst.append(text)
+            return str_to_form(lst)
