@@ -227,6 +227,19 @@ def handle_parenthesis_case(list_str):
 
     return Formula(part2, part1, part3)
 
+# def copy(value, selfObj):
+#
+#         left = None
+#         right = None
+#         if (selfObj.left != None) {
+#             left = selfObj.left.copy();
+#         }
+#         if (this.right != null) {
+#             right = this.right.copy();
+#         }
+#         return new Node(value, left, right);
+
+
 # handle the case that it start with unary '~'
 def handle_unary(list_str):
     if list_str[0][1:] == '' or list_str[0][1:] is None:
@@ -458,6 +471,37 @@ class Formula:
 
 # Tasks for Chapter 3
 
+    # Helper function for substitute_variables, traverse the tree, and making
+    # a new tree, which contain the substitute variables
+    def copy(self, dict) -> Formula:
+        value = self.root
+        left = None
+        right = None
+        try:
+            if self.first is not None:
+                if str(self.first) in dict:
+                    left = dict[str(self.first)]
+                else:
+                    left = self.first.copy(dict)
+        except AttributeError:
+            pass
+        try:
+            if self.second is not None:
+                if str(self.second) in dict:
+                    right = dict[str(self.second)]
+                else:
+                    right = self.second.copy(dict)
+        except AttributeError:
+            pass
+        if value in dict:
+            valueInDict = str(dict[value])
+            if not (is_variable(valueInDict) or is_binary(valueInDict) or is_constant(valueInDict)):
+                return dict[value]
+            else:
+                value = valueInDict
+
+        return Formula(value, left, right)
+
     def substitute_variables(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
         """Substitutes in the current formula, each variable `v` that is a key
@@ -504,22 +548,23 @@ class Formula:
         #     pass
         # print("Mirror is : ", mirror)
         # return mirror
-        lst = list()
-        print(in_order_traverse_substitute_variables_helper(self, substitution_map, lst))
-        f_str = ""
-        print("THE LIST IS : ", lst)
-        for s in lst:
-            f_str += str(s)
-        print("FINAL STR IS " ,f_str)
-        tmp = list()
-        str_1 = "((~(~p->q)&w)|((~p->q)->~~F)))"
-        tmp.append(str_1)
-        print("The Good Formula is : ", str_to_form(tmp))
-
-        return str_to_form(list(f_str))
-
+        ##############################
+        # lst = list()
+        # print(in_order_traverse_substitute_variables_helper(self, substitution_map, lst))
+        # f_str = ""
+        # print("THE LIST IS : ", lst)
+        # for s in lst:
+        #     f_str += str(s)
+        # print("FINAL STR IS " ,f_str)
+        # tmp = list()
+        # str_1 = "((~(~p->q)&w)|((~p->q)->~~F)))"
+        # tmp.append(str_1)
+        # print("The Good Formula is : ", str_to_form(tmp))
+        #
+        # return str_to_form(list(f_str))
+        ##########################
         # return self
-
+        return self.copy(substitution_map)
 
     def substitute_operators(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
