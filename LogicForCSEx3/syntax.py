@@ -521,6 +521,7 @@ class Formula:
         """
         for variable in substitution_map:
             assert is_variable(variable)
+        # Task 3.3
 
         return self.copy(substitution_map)
 
