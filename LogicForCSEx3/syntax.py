@@ -521,49 +521,7 @@ class Formula:
         """
         for variable in substitution_map:
             assert is_variable(variable)
-        # Task 3.3
-        # if self.root in substitution_map:
-        #     mirror = substitution_map[self.root]
-        # else:
-        #     mirror = Formula(self.root)
-        # try:
-        #     if self.second is not None:
-        #         print("Second is : ", self.second)
-        #         if self.second in substitution_map:
-        #             print("Got in to Second")
-        #             mirror.first = substitution_map[self.second]
-        #         else:
-        #             mirror.first = self.first.substitute_variables()
-        # except AttributeError:
-        #     pass
-        # try:
-        #     if self.first is not None:
-        #         print("First is : ", self.first)
-        #         if self.first in substitution_map:
-        #             print("First got in")
-        #             mirror.second = substitution_map[self.first]
-        #         else:
-        #             mirror.second = self.second.substitute_variables()
-        # except AttributeError:
-        #     pass
-        # print("Mirror is : ", mirror)
-        # return mirror
-        ##############################
-        # lst = list()
-        # print(in_order_traverse_substitute_variables_helper(self, substitution_map, lst))
-        # f_str = ""
-        # print("THE LIST IS : ", lst)
-        # for s in lst:
-        #     f_str += str(s)
-        # print("FINAL STR IS " ,f_str)
-        # tmp = list()
-        # str_1 = "((~(~p->q)&w)|((~p->q)->~~F)))"
-        # tmp.append(str_1)
-        # print("The Good Formula is : ", str_to_form(tmp))
-        #
-        # return str_to_form(list(f_str))
-        ##########################
-        # return self
+
         return self.copy(substitution_map)
 
     def substitute_operators(
