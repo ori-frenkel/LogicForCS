@@ -143,23 +143,31 @@ def in_order_traverse(formula_obj, set_to_store : Set[str], _type):
     except AttributeError:
         pass
 
-def in_order_traverse_substitute_variables_helper(formula_obj, dict):
+def in_order_traverse_substitute_variables_helper(formula_obj, dict, lst):
     if formula_obj is None:
         return
     try:
-        in_order_traverse_substitute_variables_helper(formula_obj.first, dict)
+        in_order_traverse_substitute_variables_helper(formula_obj.first, dict, lst)
     except AttributeError:
         pass
     print("Formula Obj is : ", formula_obj)
-    if formula_obj in dict or formula_obj.root in dict:
+    if str(formula_obj) in dict:
         print("Change this : ", formula_obj)
-        formula_obj = dict[formula_obj.root]
+        formula_obj = dict[str(formula_obj)]
         print("TO this : ", formula_obj)
+        print("Root is : ", lst)
+        print("Added this : ", str(formula_obj))
+        lst.append(formula_obj)
+    else:
+        print("Added this : ", str(formula_obj))
+        lst.append(formula_obj.root)
 
     try:
-        in_order_traverse_substitute_variables_helper(formula_obj.second, dict)
+        in_order_traverse_substitute_variables_helper(formula_obj.second, dict, lst)
     except AttributeError:
         pass
+    print("The end is : ", str(formula_obj))
+    return formula_obj
 
 # check if the given input is None
 def check_for_none(_input):
@@ -218,6 +226,19 @@ def handle_parenthesis_case(list_str):
         list_str[0] = list_str[0][1:]  # removing the ')'
 
     return Formula(part2, part1, part3)
+
+# def copy(value, selfObj):
+#
+#         left = None
+#         right = None
+#         if (selfObj.left != None) {
+#             left = selfObj.left.copy();
+#         }
+#         if (this.right != null) {
+#             right = this.right.copy();
+#         }
+#         return new Node(value, left, right);
+
 
 # handle the case that it start with unary '~'
 def handle_unary(list_str):
@@ -305,6 +326,7 @@ class Formula:
             assert type(first) is Formula and second is None
             self.root, self.first = root, first
         else:
+            # print("Second is : ", second, "\n And type is : ", str(type(second)))
             assert is_binary(root) and type(first) is Formula and \
                    type(second) is Formula
             self.root, self.first, self.second = root, first, second
@@ -448,6 +470,32 @@ class Formula:
         # Optional Task 1.8
 
 # Tasks for Chapter 3
+    def copy(self, dict) -> Formula:
+        value = self.root
+        left = None
+        right = None
+        try:
+            if self.first is not None:
+                if str(self.first) in dict:
+                    left = dict[str(self.first)]
+                else:
+                    left = self.first.copy(dict)
+        except AttributeError:
+            pass
+        try:
+            if self.second is not None:
+                if str(self.second) in dict:
+                    right = dict[str(self.second)]
+                else:
+                    right = self.second.copy(dict)
+        except AttributeError:
+            pass
+        if value in dict:
+            value = str(dict[value])
+            if not (is_variable(value) or is_binary(value) or is_constant(value)):
+                return dict[value]
+
+        return Formula(value, left, right)
 
     def substitute_variables(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
@@ -469,11 +517,49 @@ class Formula:
         for variable in substitution_map:
             assert is_variable(variable)
         # Task 3.3
-        print("Test on : ")
-        print("String : " + str(self))
-        print("dict is : " , substitution_map)
-        in_order_traverse_substitute_variables_helper(self, substitution_map)
-        return self
+        # if self.root in substitution_map:
+        #     mirror = substitution_map[self.root]
+        # else:
+        #     mirror = Formula(self.root)
+        # try:
+        #     if self.second is not None:
+        #         print("Second is : ", self.second)
+        #         if self.second in substitution_map:
+        #             print("Got in to Second")
+        #             mirror.first = substitution_map[self.second]
+        #         else:
+        #             mirror.first = self.first.substitute_variables()
+        # except AttributeError:
+        #     pass
+        # try:
+        #     if self.first is not None:
+        #         print("First is : ", self.first)
+        #         if self.first in substitution_map:
+        #             print("First got in")
+        #             mirror.second = substitution_map[self.first]
+        #         else:
+        #             mirror.second = self.second.substitute_variables()
+        # except AttributeError:
+        #     pass
+        # print("Mirror is : ", mirror)
+        # return mirror
+        ##############################
+        # lst = list()
+        # print(in_order_traverse_substitute_variables_helper(self, substitution_map, lst))
+        # f_str = ""
+        # print("THE LIST IS : ", lst)
+        # for s in lst:
+        #     f_str += str(s)
+        # print("FINAL STR IS " ,f_str)
+        # tmp = list()
+        # str_1 = "((~(~p->q)&w)|((~p->q)->~~F)))"
+        # tmp.append(str_1)
+        # print("The Good Formula is : ", str_to_form(tmp))
+        #
+        # return str_to_form(list(f_str))
+        ##########################
+        # return self
+        return self.copy(substitution_map)
 
     def substitute_operators(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
