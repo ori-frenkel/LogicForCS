@@ -473,7 +473,7 @@ class Formula:
 
     # Helper function for substitute_variables, traverse the tree, and making
     # a new tree, which contain the substitute variables
-    def copy(self, dict) -> Formula:
+    def copy_and_substitute_variables(self, dict) -> Formula:
         value = self.root
         left = None
         right = None
@@ -482,7 +482,7 @@ class Formula:
                 if str(self.first) in dict:
                     left = dict[str(self.first)]
                 else:
-                    left = self.first.copy(dict)
+                    left = self.first.copy_and_substitute_variables(dict)
         except AttributeError:
             pass
         try:
@@ -490,12 +490,13 @@ class Formula:
                 if str(self.second) in dict:
                     right = dict[str(self.second)]
                 else:
-                    right = self.second.copy(dict)
+                    right = self.second.copy_and_substitute_variables(dict)
         except AttributeError:
             pass
         if value in dict:
             valueInDict = str(dict[value])
-            if not (is_variable(valueInDict) or is_binary(valueInDict) or is_constant(valueInDict)):
+            if not (is_variable(valueInDict) or is_binary(valueInDict)
+                    or is_constant(valueInDict)):
                 return dict[value]
             else:
                 value = valueInDict
@@ -523,7 +524,7 @@ class Formula:
             assert is_variable(variable)
         # Task 3.3
 
-        return self.copy(substitution_map)
+        return self.copy_and_substitute_variables(substitution_map)
 
     def substitute_operators(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
@@ -550,3 +551,5 @@ class Formula:
                    is_constant(operator)
             assert substitution_map[operator].variables().issubset({'p', 'q'})
         # Task 3.4
+            
+
