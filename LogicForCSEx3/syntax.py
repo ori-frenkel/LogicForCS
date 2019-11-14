@@ -227,18 +227,6 @@ def handle_parenthesis_case(list_str):
 
     return Formula(part2, part1, part3)
 
-# def copy(value, selfObj):
-#
-#         left = None
-#         right = None
-#         if (selfObj.left != None) {
-#             left = selfObj.left.copy();
-#         }
-#         if (this.right != null) {
-#             right = this.right.copy();
-#         }
-#         return new Node(value, left, right);
-
 
 # handle the case that it start with unary '~'
 def handle_unary(list_str):
@@ -292,6 +280,54 @@ def str_to_form(list_str):
         list_str[0] = VAR_ERR
         return None
 
+def check_for_null(formula):
+    first = False
+    second = False
+    try:
+        tmp1 = formula.first
+    except AttributeError:
+        first = True
+    try:
+        tmp2 = formula.second
+    except AttributeError:
+        second = True
+    return first, second
+
+# this function check if self.first exist or not, and return the formula
+#  according to it (if it does not exist change the dict according to it)
+# for example, if formula.right.right does not exist, than we dont need to
+# substitute 'p' therefor we send dict without 'p'
+def operator_substitute_helper(formula_self, dictt, left_or_right):
+    if left_or_right == "left":
+        result_check_null = check_for_null(formula_self.first)
+        if result_check_null[0] and result_check_null[1]:
+            return dictt[str(formula_self.first)]
+        elif result_check_null[0] and not result_check_null[1]:
+            return dictt[str(formula_self.first)].substitute_variables(
+                {'q': formula_self.first.second}, True)
+        elif not result_check_null[0] and result_check_null[1]:
+            return dictt[str(formula_self.first)].substitute_variables(
+                {'p': formula_self.first.first}, True)
+        else:
+            return dictt[str(formula_self.first)].substitute_variables(
+                   {'p': formula_self.first.first, 'q': formula_self.first.second},
+                    True)
+    else:
+        result_check_null = check_for_null(formula_self.second)
+        if result_check_null[0] and result_check_null[1]:
+            return dictt[str(formula_self.second)]
+        elif result_check_null[0] and not result_check_null[1]:
+            return dictt[str(formula_self.second)].substitute_variables(
+                {'q': formula_self.second.second}, True)
+        elif not result_check_null[0] and result_check_null[1]:
+            return dictt[str(formula_self.second)].substitute_variables(
+                {'p': formula_self.second.first}, True)
+        else:
+            return dictt[str(formula_self.second)].substitute_variables(
+                   {'p': formula_self.second.first, 'q':
+                       formula_self.second.second},True)
+
+
 @frozen
 class Formula:
     """An immutable propositional formula in tree representation.
@@ -323,6 +359,8 @@ class Formula:
             assert first is None and second is None
             self.root = root
         elif is_unary(root):
+            if type(first) is not Formula:
+                print("first is : ", first, "  And root is : ", root)
             assert type(first) is Formula and second is None
             self.root, self.first = root, first
         else:
@@ -504,7 +542,7 @@ class Formula:
         return Formula(value, left, right)
 
     def substitute_variables(
-            self, substitution_map: Mapping[str, Formula]) -> Formula:
+            self, substitution_map: Mapping[str, Formula], remove_none = False) -> Formula:
         """Substitutes in the current formula, each variable `v` that is a key
         in `substitution_map` with the formula `substitution_map[v]`.
 
@@ -523,8 +561,40 @@ class Formula:
         for variable in substitution_map:
             assert is_variable(variable)
         # Task 3.3
+        if remove_none:
+            new_dict = dict(substitution_map)
+            for key, val in substitution_map.items():
+                if val is None:
+                    del new_dict[key]
+            return self.copy_and_substitute_variables(new_dict)
 
         return self.copy_and_substitute_variables(substitution_map)
+
+
+    def copy_and_substitute_operator(self, dict) -> Formula:
+        value = self.root
+        left = None
+        right = None
+        try:
+            if self.first is not None:
+                if str(self.first) in dict:
+                   left = operator_substitute_helper(self, dict, "left")
+                else:
+                    left = self.first.copy_and_substitute_operator(dict)
+        except AttributeError:
+            pass
+        try:
+            if self.second is not None:
+                if str(self.second) in dict:
+                    right =  operator_substitute_helper(self, dict, "right")
+                else:
+                    right = self.second.copy_and_substitute_operator(dict)
+        except AttributeError:
+            pass
+        if value in dict:
+            return dict[value].substitute_variables({'p' : left, 'q' : right}, True)
+
+        return Formula(value, left, right)
 
     def substitute_operators(
             self, substitution_map: Mapping[str, Formula]) -> Formula:
@@ -551,5 +621,5 @@ class Formula:
                    is_constant(operator)
             assert substitution_map[operator].variables().issubset({'p', 'q'})
         # Task 3.4
-            
 
+        return self.copy_and_substitute_operator(substitution_map)
