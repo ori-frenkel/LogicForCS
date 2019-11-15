@@ -59,6 +59,7 @@ def to_nand(formula: Formula) -> Formula:
         contains no constants or operators beyond ``'-&'``.
     """
     # Task 3.6b
+    # I didn't use the to_not_and for speed reasons
     dict_operators = {'&' : Formula.parse("((p-&q)-&(p-&q))"),
                       '|' : Formula.parse("((p-&p)-&(q-&q))"),
                       '~' : Formula.parse("(p-&p)")}
@@ -76,6 +77,8 @@ def to_implies_not(formula: Formula) -> Formula:
         contains no constants or operators beyond ``'->'`` and ``'~'``.
     """
     # Task 3.6c
+    dict_operators = {'-&' : Formula.parse("(q->~p)")}
+    return to_nand(formula).substitute_operators(dict_operators)
 
 def to_implies_false(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
@@ -89,3 +92,7 @@ def to_implies_false(formula: Formula) -> Formula:
         contains no constants or operators beyond ``'->'`` and ``'F'``.
     """
     # Task 3.6d
+    # I didn't used the to_implies_not for speed reasons
+    dict_operators = {'-&' : Formula.parse("(q->(p->F))"),
+                      '~' : Formula.parse("(p->F)")}
+    return to_nand(formula).substitute_operators(dict_operators)
