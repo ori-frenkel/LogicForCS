@@ -542,7 +542,8 @@ class Formula:
         return Formula(value, left, right)
 
     def substitute_variables(
-            self, substitution_map: Mapping[str, Formula], remove_none = False) -> Formula:
+            self, substitution_map: Mapping[str, Formula],
+            remove_none = False, var_assert = True) -> Formula:
         """Substitutes in the current formula, each variable `v` that is a key
         in `substitution_map` with the formula `substitution_map[v]`.
 
@@ -558,8 +559,9 @@ class Formula:
             ...     {'p': Formula.parse('(q&r)')})
             (((q&r)->(q&r))|z)
         """
-        for variable in substitution_map:
-            assert is_variable(variable)
+        if var_assert:
+            for variable in substitution_map:
+                assert is_variable(variable)
         # Task 3.3
         if remove_none:
             new_dict = dict(substitution_map)
