@@ -23,13 +23,13 @@ def to_not_and_or(formula: Formula) -> Formula:
     """
     # Task 3.5
     dict_variables = {'T' : Formula.parse("(~p|p)"), 'F' : Formula.parse("(~p&p)")}
-    dictt_operator = {'-&' : Formula.parse("~(p&q)"),
+    dict_operator = {'-&' : Formula.parse("~(p&q)"),
                       '-|' : Formula.parse("~(p|q)"),
                       '+' : Formula.parse("(~(p&q)&(p|q))"),
                       '<->' : Formula.parse("~(~(p&q)&(p|q))"),
                       '->' : Formula.parse("(~p|q)")}
 
-    return formula.substitute_variables(dict_variables, False, True).substitute_operators(dictt_operator)
+    return formula.substitute_variables(dict_variables, False, True).substitute_operators(dict_operator)
 
 def to_not_and(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
@@ -43,6 +43,9 @@ def to_not_and(formula: Formula) -> Formula:
         contains no constants or operators beyond ``'~'`` and ``'&'``.
     """
     # Task 3.6a
+    dict_operators = {'|' : Formula.parse("~(~p&~q)")}
+    return to_not_and_or(formula).substitute_operators(dict_operators)
+
 
 def to_nand(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
