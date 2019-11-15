@@ -59,6 +59,10 @@ def to_nand(formula: Formula) -> Formula:
         contains no constants or operators beyond ``'-&'``.
     """
     # Task 3.6b
+    dict_operators = {'&' : Formula.parse("((p-&q)-&(p-&q))"),
+                      '|' : Formula.parse("((p-&p)-&(q-&q))"),
+                      '~' : Formula.parse("(p-&p)")}
+    return to_not_and_or(formula).substitute_operators(dict_operators)
 
 def to_implies_not(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
