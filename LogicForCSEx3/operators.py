@@ -29,7 +29,7 @@ def to_not_and_or(formula: Formula) -> Formula:
                       '<->' : Formula.parse("~(~(p&q)&(p|q))"),
                       '->' : Formula.parse("(~p|q)")}
 
-    return formula.substitute_variables(dict_variables, False, False).substitute_operators(dictt_operator)
+    return formula.substitute_variables(dict_variables, False, True).substitute_operators(dictt_operator)
 
 def to_not_and(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
