@@ -121,7 +121,7 @@ class InferenceRule:
 
         substitute_conclusion =  self.conclusion.substitute_variables(
                                                         specialization_map)
-        
+
         return InferenceRule(assumption_tuple, substitute_conclusion)
 
 
@@ -149,6 +149,26 @@ class InferenceRule:
             for variable in specialization_map2:
                 assert is_variable(variable)
         # Task 4.5a
+        if specialization_map1 is None or specialization_map2 is None:
+            return None
+        merged_dict = dict()
+        for key, value in specialization_map1.items():
+            if key in specialization_map2:
+                # if both dict has same key but different value, return None
+                if value != specialization_map2[key]:
+                    return None
+                else:
+                    # if both keys has same key and same value add this to the
+                    #  merged dict
+                    merged_dict.update({key: value})
+            else:
+                # add all the keys that in dict1 but not in dict 2
+                merged_dict.update({key: value})
+        # add all the key that in dict2 but not in dict 1
+        for key,value in specialization_map2.items():
+            if key not in specialization_map1:
+                merged_dict.update({key: value})
+        return merged_dict
         
     @staticmethod
     def formula_specialization_map(general: Formula, specialization: Formula) \
