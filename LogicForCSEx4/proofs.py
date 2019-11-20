@@ -244,6 +244,29 @@ class InferenceRule:
             in fact not a specialization of the current rule.
         """
         # Task 4.5c
+        # if one conclusion require different number of assumption from the
+        # other conclusion, than it cant be specialization of one another
+        if len(self.assumptions) != len(specialization.assumptions):
+            return None
+
+        spec_dict = self.formula_specialization_map(self.conclusion ,
+                                                    specialization.conclusion)
+        if spec_dict is None:
+            return None
+        for assumption_general in self.assumptions:
+            for assumption_specialization in specialization.assumptions:
+                temp_dict = self.formula_specialization_map(assumption_general,
+                                                     assumption_specialization)
+                if temp_dict is not None:
+                    spec_dict = self.merge_specialization_maps(spec_dict, temp_dict)
+                    # if merged and there was a contradiction, than its not a
+                    # specialization
+                    if spec_dict is None:
+                        return None
+        if len(spec_dict) == 0:
+            return None
+        return spec_dict
+
 
     def is_specialization_of(self, general: InferenceRule) -> bool:
         """Checks if the current inference rule is a specialization of the given
