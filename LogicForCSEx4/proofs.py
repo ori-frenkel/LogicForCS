@@ -15,29 +15,42 @@ from propositions.syntax import *
 
 SpecializationMap = Mapping[str, Formula]
 
+NOT_SPECIALISATION = 1
+"""
+    helper function for formula_specialization_map
+input:
+    obj1 - the general formula
+    obj2 - the specialisation of obj1
+    dict - empty dict to add the mapping that make obj2 specialisation of obj1
+output:    
+    return NOT_SPECIALISATION if obj2 is not specialisation of obj1
+    else, return nothing (and update the dict to the mapping that make 
+    obj2 specialisation of obj1
+"""
 def preorder_traverse(obj1 : Formula, obj2 : Formula, dict):
     if obj1 is not None and obj2 is not None:
-        # print("ROOT IS : ", obj1.root)
         if obj1.root != obj2.root:
             if not is_variable(obj1.root):
-                return 1
+                return NOT_SPECIALISATION
             else:
                 # case where the same variable gets two different values
                 if obj1.root in dict and dict[obj1.root] != obj2:
-                    return 1
+                    return NOT_SPECIALISATION
                 else:
                     dict.update({obj1.root : obj2})
         elif is_variable(obj1.root):
             dict.update({obj1.root : Formula(obj2.root)})
         try:
-            if preorder_traverse(obj1.first, obj2.first, dict) == 1:
-                return 1
+            if preorder_traverse(obj1.first, obj2.first, dict) == \
+                    NOT_SPECIALISATION:
+                return NOT_SPECIALISATION
         except AttributeError:
             pass
 
         try:
-            if preorder_traverse(obj1.second, obj2.second, dict) == 1:
-                return 1
+            if preorder_traverse(obj1.second, obj2.second, dict) == \
+                    NOT_SPECIALISATION:
+                return NOT_SPECIALISATION
         except AttributeError:
             pass
 
@@ -212,9 +225,9 @@ class InferenceRule:
         """
         # Task 4.5b
         my_dict = dict()
-        if preorder_traverse(general, specialization, my_dict) is 1:
+        if preorder_traverse(general, specialization, my_dict) ==\
+                NOT_SPECIALISATION:
             return None
-        print(my_dict)
 
         return my_dict
 
