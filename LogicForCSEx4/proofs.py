@@ -15,6 +15,32 @@ from propositions.syntax import *
 
 SpecializationMap = Mapping[str, Formula]
 
+def preorder_traverse(obj1 : Formula, obj2 : Formula, dict):
+    if obj1 is not None and obj2 is not None:
+        # print("ROOT IS : ", obj1.root)
+        if obj1.root != obj2.root:
+            if not is_variable(obj1.root):
+                return 1
+            else:
+                # case where the same variable gets two different values
+                if obj1.root in dict and dict[obj1.root] != obj2:
+                    return 1
+                else:
+                    dict.update({obj1.root : obj2})
+        elif is_variable(obj1.root):
+            dict.update({obj1.root : Formula(obj2.root)})
+        try:
+            if preorder_traverse(obj1.first, obj2.first, dict) == 1:
+                return 1
+        except AttributeError:
+            pass
+
+        try:
+            if preorder_traverse(obj1.second, obj2.second, dict) == 1:
+                return 1
+        except AttributeError:
+            pass
+
 @frozen
 class InferenceRule:
     """An immutable inference rule in propositional logic, comprised by zero
@@ -185,6 +211,12 @@ class InferenceRule:
             in fact not a specialization of `general`.
         """
         # Task 4.5b
+        my_dict = dict()
+        if preorder_traverse(general, specialization, my_dict) is 1:
+            return None
+        print(my_dict)
+
+        return my_dict
 
     def specialization_map(self, specialization: InferenceRule) -> \
             Union[SpecializationMap, None]:
