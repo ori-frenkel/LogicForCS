@@ -27,6 +27,22 @@ output:
     else, return nothing (and update the dict to the mapping that make 
     obj2 specialisation of obj1
 """
+
+def helper(list_of_formula, conclusion):
+    to_return = list_of_formula
+    first = True
+    for formula in list_of_formula:
+        if first:
+            to_return = formula
+            first = False
+        else:
+            to_return = Formula('&',to_return, formula)
+    if not first:
+        return Formula('->',to_return, conclusion)
+    else:
+        return conclusion
+
+
 def preorder_traverse(obj1 : Formula, obj2 : Formula, dict):
     if obj1 is not None and obj2 is not None:
         if obj1.root != obj2.root:
@@ -39,6 +55,8 @@ def preorder_traverse(obj1 : Formula, obj2 : Formula, dict):
                 else:
                     dict.update({obj1.root : obj2})
         elif is_variable(obj1.root):
+            if obj1.root in dict and dict[obj1.root] != obj2:
+                return NOT_SPECIALISATION
             dict.update({obj1.root : Formula(obj2.root)})
         try:
             if preorder_traverse(obj1.first, obj2.first, dict) == \
@@ -228,7 +246,6 @@ class InferenceRule:
         if preorder_traverse(general, specialization, my_dict) ==\
                 NOT_SPECIALISATION:
             return None
-
         return my_dict
 
     def specialization_map(self, specialization: InferenceRule) -> \
@@ -246,26 +263,10 @@ class InferenceRule:
         # Task 4.5c
         # if one conclusion require different number of assumption from the
         # other conclusion, than it cant be specialization of one another
-        if len(self.assumptions) != len(specialization.assumptions):
-            return None
+        general = helper(self.assumptions, self.conclusion)
+        my_specialization = helper(specialization.assumptions, specialization.conclusion)
 
-        spec_dict = self.formula_specialization_map(self.conclusion ,
-                                                    specialization.conclusion)
-        if spec_dict is None:
-            return None
-        for assumption_general in self.assumptions:
-            for assumption_specialization in specialization.assumptions:
-                temp_dict = self.formula_specialization_map(assumption_general,
-                                                     assumption_specialization)
-                if temp_dict is not None:
-                    spec_dict = self.merge_specialization_maps(spec_dict, temp_dict)
-                    # if merged and there was a contradiction, than its not a
-                    # specialization
-                    if spec_dict is None:
-                        return None
-        if len(spec_dict) == 0:
-            return None
-        return spec_dict
+        return self.formula_specialization_map(general, my_specialization)
 
 
     def is_specialization_of(self, general: InferenceRule) -> bool:
