@@ -28,10 +28,15 @@ output:
     obj2 specialisation of obj1
 """
 
-def helper(list_of_formula, conclusion):
-    to_return = list_of_formula
+"""
+This function gets a list of formula - assumptions
+and connect it by '&' (and) and connect the conclusion with '->'
+and return it as one formula 
+"""
+def specialization_map_helper(list_of_assumptions, conclusion):
+    to_return = list_of_assumptions
     first = True
-    for formula in list_of_formula:
+    for formula in list_of_assumptions:
         if first:
             to_return = formula
             first = False
@@ -263,8 +268,9 @@ class InferenceRule:
         # Task 4.5c
         # if one conclusion require different number of assumption from the
         # other conclusion, than it cant be specialization of one another
-        general = helper(self.assumptions, self.conclusion)
-        my_specialization = helper(specialization.assumptions, specialization.conclusion)
+        general = specialization_map_helper(self.assumptions, self.conclusion)
+        my_specialization = specialization_map_helper(
+            specialization.assumptions, specialization.conclusion)
 
         return self.formula_specialization_map(general, my_specialization)
 
