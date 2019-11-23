@@ -273,6 +273,8 @@ class InferenceRule:
         # Task 4.5c
         # if one conclusion require different number of assumption from the
         # other conclusion, than it cant be specialization of one another
+        if len(self.assumptions) != len(specialization.assumptions):
+            return None
         general = specialization_map_helper(self.assumptions, self.conclusion)
         my_specialization = specialization_map_helper(
             specialization.assumptions, specialization.conclusion)
@@ -292,6 +294,22 @@ class InferenceRule:
             `general`, ``False`` otherwise.
         """
         return general.specialization_map(self) is not None
+
+"""
+Input:
+lst_of_assumptions_line - list of line of assumptions that needed in order to
+                          prove the current line
+curr_line - the index of the current line
+return:
+    True if all the assumptions that the current line is based on comes before
+    the current line, False other wise.
+"""
+def valid_index_assumptions(lst_of_assumptions_line, curr_line):
+    for line_index in lst_of_assumptions_line:
+        if line_index >= curr_line:
+            return False
+    return True
+
 
 @frozen
 class Proof:
@@ -414,6 +432,7 @@ class Proof:
         return r
 
     def all_assumptions(self):
+        # todo : delete this if not in use
         to_return = list()
         try:
             for assumption in self.rules.assumptions:
@@ -423,6 +442,7 @@ class Proof:
             return None
 
     def all_conclusion(self):
+        # todo : delete this if not in use
         to_return = list()
         try:
             for conclusion in self.rules.conclusion:
@@ -457,8 +477,6 @@ class Proof:
             assumption_to_return.append(self.lines[assumption_line_index].formula)
         return InferenceRule(assumption_to_return, self.lines[line_number].formula)
 
-
-
     def is_line_valid(self, line_number: int) -> bool:
         """Checks if the specified line validly follows from its justifications.
 
@@ -477,11 +495,31 @@ class Proof:
             2. Some specialization of the rule specified for that line has
                the formula justified by that line as its conclusion, and the
                formulae justified by the lines specified as the assumptions of
-               that line (in the order of their indices in this line) as its
+               that line (in the or der of their indices in this line) as its
                assumptions.
         """
         assert line_number < len(self.lines)
         # Task 4.6b
+        # if its assumption
+        if self.lines[line_number].is_assumption():
+            # than it must be assumption in the statement
+            if self.lines[line_number].formula in self.statement.assumptions:
+                return True
+            else:
+                return False
+        else:
+            # 1.checking its rule are possible rule (in self.rules)
+            # 2.checking that all of the assumptions come before the line that
+            # need them
+            # 3. checking from specialization
+            if self.lines[line_number].rule in self.rules and \
+                    valid_index_assumptions(
+                        self.lines[line_number].assumptions, line_number) \
+                and self.rule_for_line(line_number).is_specialization_of(self.lines[line_number].rule):
+                return True
+        return False
+
+
         
     def is_valid(self) -> bool:
         """Checks if the current proof is a valid proof of its claimed statement
@@ -492,7 +530,11 @@ class Proof:
             statement via its inference rules, ``False`` otherwise.
         """
         # Task 4.6c
+        for line_index in range(len(self.lines)):
+            if not self.is_line_valid(line_index):
+                return False
 
+        return True
 # Chapter 5 tasks
 
 def prove_specialization(proof: Proof, specialization: InferenceRule) -> Proof:
