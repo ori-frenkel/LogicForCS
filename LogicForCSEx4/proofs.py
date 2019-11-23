@@ -530,10 +530,12 @@ class Proof:
             statement via its inference rules, ``False`` otherwise.
         """
         # Task 4.6c
+        # if one of the lines is invalid than the proof is invalid.
         for line_index in range(len(self.lines)):
             if not self.is_line_valid(line_index):
                 return False
-
+        if self.statement.conclusion != self.lines[len(self.lines) - 1].formula:
+             return False
         return True
 # Chapter 5 tasks
 
