@@ -47,7 +47,10 @@ def specialization_map_helper(list_of_assumptions, conclusion):
     else:
         return conclusion
 
-
+"""
+Traverse the tree in preorder and find the minimal mapping between 
+obj1( general formula and it's specialization - obj2)  
+"""
 def preorder_traverse(obj1 : Formula, obj2 : Formula, dict):
     if obj1 is not None and obj2 is not None:
         if obj1.root != obj2.root:
@@ -60,9 +63,11 @@ def preorder_traverse(obj1 : Formula, obj2 : Formula, dict):
                 else:
                     dict.update({obj1.root : obj2})
         elif is_variable(obj1.root):
+            # case where the same variable gets two different values
             if obj1.root in dict and dict[obj1.root] != obj2:
                 return NOT_SPECIALISATION
-            dict.update({obj1.root : Formula(obj2.root)})
+            else:
+                dict.update({obj1.root : Formula(obj2.root)})
         try:
             if preorder_traverse(obj1.first, obj2.first, dict) == \
                     NOT_SPECIALISATION:
@@ -408,6 +413,24 @@ class Proof:
             r += ("%3d) " % i) + str(self.lines[i]) + '\n'
         return r
 
+    def all_assumptions(self):
+        to_return = list()
+        try:
+            for assumption in self.rules.assumptions:
+                to_return.append(assumption)
+            return to_return
+        except AttributeError:
+            return None
+
+    def all_conclusion(self):
+        to_return = list()
+        try:
+            for conclusion in self.rules.conclusion:
+                to_return.append(conclusion)
+            return to_return
+        except AttributeError:
+            return None
+
     def rule_for_line(self, line_number: int) -> Union[InferenceRule, None]:
         """Computes the inference rule whose conclusion is the formula justified
         by the specified line, and whose assumptions are the formulae justified
@@ -424,6 +447,17 @@ class Proof:
         """
         assert line_number < len(self.lines)
         # Task 4.6a
+        # return None if the specified line is justified as an assumption.
+        if self.lines[line_number].is_assumption():
+            return None
+        # else, return InferenceRule with all of the assumption of the given
+        # line, and the conclusion (which is the given line)
+        assumption_to_return = list()
+        for assumption_line_index in self.lines[line_number].assumptions:
+            assumption_to_return.append(self.lines[assumption_line_index].formula)
+        return InferenceRule(assumption_to_return, self.lines[line_number].formula)
+
+
 
     def is_line_valid(self, line_number: int) -> bool:
         """Checks if the specified line validly follows from its justifications.
