@@ -553,6 +553,25 @@ def prove_specialization(proof: Proof, specialization: InferenceRule) -> Proof:
 
     return Proof(specialization_statement,proof.rules, new_lines)
 
+# getting array and shift all the numbers inside by 'shift_by'
+def array_number_adder(arr, shift_by):
+    l_array = list()
+    for i in range(len(arr)):
+        l_array.append(arr[i] + shift_by)
+    return l_array
+
+# part 3 from guidance - shift all the assumption's line (after line_number)
+def helper_part3(new_lines, shift_by : int, curr_line : Proof.Line):
+
+    try:
+        if curr_line.rule:
+            new_lines.append(Proof.Line(curr_line.formula,curr_line.rule,
+                                        array_number_adder(
+                                            curr_line.assumptions,
+                                                           shift_by)))
+    except AttributeError:
+        new_lines.append(Proof.Line(curr_line.formula))
+
 def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
     -> Proof:
     """Inlines the given proof of a "lemma" inference rule into the given proof
@@ -580,6 +599,47 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
     assert main_proof.lines[line_number].rule == lemma_proof.statement
     assert lemma_proof.is_valid()
     # Task 5.2a
+    spec_lemma = prove_specialization(lemma_proof, main_proof.rule_for_line(line_number))
+
+    # spec_lemma = prove_specialization(lemma_proof, main_proof.lines[line_number].rule.specialization_map(lemma_proof.statement.conclusion))
+    # combine rule minus lemma statement
+    total_rules = list()
+    for rule in main_proof.rules:
+        total_rules.append(rule)
+    for rule in lemma_proof.rules:
+        total_rules.append(rule)
+    if lemma_proof.statement in total_rules:
+        total_rules.remove(lemma_proof.statement)
+
+    new_lines = list()
+    # same n-1 lines (part a from guidance)
+    for idx,line in enumerate(main_proof.lines):
+        if idx < line_number:
+            new_lines.append(line)
+        # part b from guidance
+        elif idx == line_number:
+            for lemma_line in spec_lemma.lines:
+                if lemma_line.is_assumption():
+                    if lemma_line in main_proof.statement.assumptions:
+                        new_lines.append(lemma_line)
+                    else:
+                        for idx2, proof_line in enumerate(main_proof.lines):
+                            # only line that before current line in the main proof
+                            if idx >= line_number:
+                                break
+                            if proof_line == lemma_line:
+                                helper_part3(new_lines, line_number ,proof_line)
+                                break
+                else:
+                    helper_part3(new_lines, line_number, lemma_line)
+        else: # idx > line number (only need to shift the assumption line num
+            shift_by = len(lemma_proof.lines) - 1
+            helper_part3(new_lines, shift_by, line)
+    return Proof(main_proof.statement, total_rules, new_lines)
+
+
+
+
 
 def inline_proof(main_proof: Proof, lemma_proof: Proof) -> Proof:
     """Inlines the given proof of a "lemma" inference rule into the given proof
