@@ -580,7 +580,7 @@ def helper_part3(new_lines, shift_by : int, curr_line : Proof.Line, line_number,
     except AttributeError:
         new_lines.append(Proof.Line(curr_line.formula))
 
-def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
+def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof, delete_lemma_statement = False) \
     -> Proof:
     """Inlines the given proof of a "lemma" inference rule into the given proof
     that uses that "lemma" rule, eliminating the usage of (a specialization of)
@@ -609,15 +609,15 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
     # Task 5.2a
     spec_lemma = prove_specialization(lemma_proof, main_proof.rule_for_line(line_number))
 
-    # spec_lemma = prove_specialization(lemma_proof, main_proof.lines[line_number].rule.specialization_map(lemma_proof.statement.conclusion))
     # combine rule minus lemma statement
     total_rules = list()
     for rule in main_proof.rules:
         total_rules.append(rule)
     for rule in lemma_proof.rules:
         total_rules.append(rule)
-    # if lemma_proof.statement in total_rules:
-    #     total_rules.remove(lemma_proof.statement)
+    if delete_lemma_statement:
+     if lemma_proof.statement in total_rules:
+        total_rules.remove(lemma_proof.statement)
 
     new_lines = list()
     # same n-1 lines (part a from guidance)
@@ -671,4 +671,13 @@ def inline_proof(main_proof: Proof, lemma_proof: Proof) -> Proof:
         `lemma_proof`.
     """
     # Task 5.2b
-
+    final_proof = main_proof
+    iteration = 0
+    for idx,line in enumerate(main_proof.lines):
+        if line.rule == lemma_proof.statement:
+            line_idx = idx
+            if iteration != 0:
+                line_idx = line_idx + iteration*(len(lemma_proof.lines) - 1)
+            final_proof = inline_proof_once(final_proof, line_idx, lemma_proof, True)
+            iteration += 1
+    return final_proof
