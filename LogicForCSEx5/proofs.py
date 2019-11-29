@@ -554,21 +554,29 @@ def prove_specialization(proof: Proof, specialization: InferenceRule) -> Proof:
     return Proof(specialization_statement,proof.rules, new_lines)
 
 # getting array and shift all the numbers inside by 'shift_by'
-def array_number_adder(arr, shift_by):
+def array_number_adder(arr, shift_by, line_number, only_after_shift_by_line = False):
     l_array = list()
     for i in range(len(arr)):
+        if only_after_shift_by_line and arr[i] < line_number:
+            l_array.append(arr[i])
+            continue
         l_array.append(arr[i] + shift_by)
     return l_array
 
 # part 3 from guidance - shift all the assumption's line (after line_number)
-def helper_part3(new_lines, shift_by : int, curr_line : Proof.Line):
+# shift all the assumption line accordingly -
+# if line is before the changes : stays the same (before line_number)
+# if line after the changes, add to the number line, the shift that needed
+def helper_part3(new_lines, shift_by : int, curr_line : Proof.Line, line_number,
+                 shift_only_num_after_shift_by = False):
 
     try:
         if curr_line.rule is None or curr_line.rule is not None:
             new_lines.append(Proof.Line(curr_line.formula,curr_line.rule,
                                         array_number_adder(
-                                            curr_line.assumptions,
-                                                           shift_by)))
+                                        curr_line.assumptions, shift_by,
+                                        line_number,
+                                        shift_only_num_after_shift_by)))
     except AttributeError:
         new_lines.append(Proof.Line(curr_line.formula))
 
@@ -618,23 +626,26 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
             new_lines.append(line)
         # part b from guidance
         elif idx == line_number:
-            for lemma_line in spec_lemma.lines:
+            for idx1,lemma_line in enumerate(spec_lemma.lines):
                 if lemma_line.is_assumption():
+                    # if the line is assumption of the main proof, can copy it as is
                     if lemma_line in main_proof.statement.assumptions:
                         new_lines.append(lemma_line)
                     else:
-                        for idx2, proof_line in enumerate(main_proof.lines):
-                            # only line that before current line in the main proof
-                            if idx2 >= line_number:
-                                break
-                            if proof_line.formula == lemma_line.formula:
-                                helper_part3(new_lines, line_number ,proof_line)
+                        # shift only the assumption line accordingly
+                        for idx2 in range(line_number - 1, (-1), -1):
+                            if main_proof.lines[idx2].formula == lemma_line.formula:
+                                helper_part3(new_lines, line_number ,
+                                             main_proof.lines[idx2],
+                                             line_number, True)
                                 break
                 else:
-                    helper_part3(new_lines, line_number, lemma_line)
+                    helper_part3(new_lines, line_number, lemma_line, line_number)
         else: # idx > line number (only need to shift the assumption line num
             shift_by = len(lemma_proof.lines) - 1
-            helper_part3(new_lines, shift_by, line)
+            # shift only the number line that bigger the line_number
+            # (and shift by len of assumption proof)
+            helper_part3(new_lines, shift_by, line, line_number, True)
     return Proof(main_proof.statement, total_rules, new_lines)
 
 
