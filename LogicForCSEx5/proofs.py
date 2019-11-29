@@ -567,8 +567,8 @@ def array_number_adder(arr, shift_by, line_number, only_after_shift_by_line = Fa
 # shift all the assumption line accordingly -
 # if line is before the changes : stays the same (before line_number)
 # if line after the changes, add to the number line, the shift that needed
-def helper_part3(new_lines, shift_by : int, curr_line : Proof.Line, line_number,
-                 shift_only_num_after_shift_by = False):
+def shift_line_assumptions(new_lines, shift_by : int, curr_line : Proof.Line, line_number = 0,
+                           shift_only_num_after_shift_by = False):
 
     try:
         if curr_line.rule is None or curr_line.rule is not None:
@@ -635,17 +635,17 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof, d
                         # shift only the assumption line accordingly
                         for line_in_assumption_idx in line.assumptions:
                             if main_proof.lines[line_in_assumption_idx].formula == lemma_line.formula:
-                                helper_part3(new_lines, line_number ,
-                                             main_proof.lines[line_in_assumption_idx],
-                                             line_number, True)
+                                shift_line_assumptions(new_lines, line_number,
+                                                       main_proof.lines[line_in_assumption_idx],
+                                                       line_number, True)
                                 break
                 else:
-                    helper_part3(new_lines, line_number, lemma_line, line_number)
+                    shift_line_assumptions(new_lines, line_number, lemma_line, line_number)
         else: # idx > line number (only need to shift the assumption line num
             shift_by = len(lemma_proof.lines) - 1
             # shift only the number line that bigger the line_number
             # (and shift by len of assumption proof)
-            helper_part3(new_lines, shift_by, line, line_number, True)
+            shift_line_assumptions(new_lines, shift_by, line, line_number, True)
     return Proof(main_proof.statement, total_rules, new_lines)
 
 

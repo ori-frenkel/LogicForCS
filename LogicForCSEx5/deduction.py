@@ -90,6 +90,47 @@ def combine_proofs(antecedent1_proof: Proof, antecedent2_proof: Proof,
         Formula('->', antecedent2_proof.statement.conclusion, consequent))
         ).is_specialization_of(double_conditional)
     # Task 5.3b
+    # consequent -> statement conclusion
+    # proof1 = prove_corollary(antecedent1_proof, antecedent2_proof.statement.conclusion, double_conditional)
+    # combined = prove_corollary(antecedent2_proof, consequent, double_conditional)
+
+    # antecedent1_proof and antecedent2_proof has the same assumptions
+    statement = InferenceRule(antecedent1_proof.statement.assumptions,
+                                       consequent)
+
+    all_rules = list()
+    for rule in antecedent1_proof.rules:
+        all_rules.append(rule)
+    all_rules.append(double_conditional)
+
+    all_lines = list()
+    count = 0
+    for line in antecedent1_proof.lines:
+        count +=1
+        all_lines.append(line)
+    part1_idx = count
+    for line in antecedent2_proof.lines:
+        count+=1
+        # because all of this proof come after antecedent1_proof, need to
+        # shift all the assumptions idx by number of line in the antecedent1_proof
+        shift_line_assumptions(all_lines, part1_idx, line)
+    part2_idx = count
+    # (part1->(part2->c)) = (a->(b->c))
+    # part3 = (part2->c) = (part2->consequent)
+    part3 = Formula('->',all_lines[part2_idx - 1].formula, consequent)
+    all_lines.append(Proof.Line(Formula('->',all_lines[part1_idx - 1].formula,part3), double_conditional, []))
+    count +=1
+
+    # first MP
+    all_lines.append(Proof.Line(part3, MP, [part1_idx - 1, count - 1]))
+    count +=1
+    # second MP (and than finished).
+    all_lines.append(Proof.Line(consequent, MP, [part2_idx - 1, count - 1]))
+
+    print("--------------------------------------------------------------\n",
+          Proof(statement, all_rules, all_lines))
+
+    return Proof(statement, all_rules, all_lines)
 
 def remove_assumption(proof: Proof) -> Proof:
     """Converts a proof of some `conclusion` formula, the last assumption of
