@@ -633,10 +633,10 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
                         new_lines.append(lemma_line)
                     else:
                         # shift only the assumption line accordingly
-                        for idx2 in range(line_number - 1, (-1), -1):
-                            if main_proof.lines[idx2].formula == lemma_line.formula:
+                        for line_in_assumption_idx in line.assumptions:
+                            if main_proof.lines[line_in_assumption_idx].formula == lemma_line.formula:
                                 helper_part3(new_lines, line_number ,
-                                             main_proof.lines[idx2],
+                                             main_proof.lines[line_in_assumption_idx],
                                              line_number, True)
                                 break
                 else:
@@ -671,3 +671,4 @@ def inline_proof(main_proof: Proof, lemma_proof: Proof) -> Proof:
         `lemma_proof`.
     """
     # Task 5.2b
+
