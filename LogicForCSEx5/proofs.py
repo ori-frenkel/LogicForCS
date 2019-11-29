@@ -567,6 +567,8 @@ def array_number_adder(arr, shift_by, line_number, only_after_shift_by_line = Fa
 # shift all the assumption line accordingly -
 # if line is before the changes : stays the same (before line_number)
 # if line after the changes, add to the number line, the shift that needed
+# (this function added the modified line (with shifted assumption indexes to
+#  new_lines list - input of function)
 def shift_line_assumptions(new_lines, shift_by : int, curr_line : Proof.Line, line_number = 0,
                            shift_only_num_after_shift_by = False):
 
