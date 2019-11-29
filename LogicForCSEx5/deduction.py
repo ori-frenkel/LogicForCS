@@ -39,11 +39,14 @@ def prove_corollary(antecedent_proof: Proof, consequent: Formula,
 
     all_lines = list()
     count = 0
+    # coping all the antecedent_proof
     for line in antecedent_proof.lines:
         count +=1
         all_lines.append(line)
+    # copying the right (p->q) using the conditional rule
     all_lines.append(Proof.Line(Formula('->', antecedent_proof.statement.conclusion,
                                         statement.conclusion),conditional, []))
+    # using MP rule on the last two lines.
     all_lines.append(Proof.Line(statement.conclusion, MP,[count - 1, count]))
 
     all_rules = list()
