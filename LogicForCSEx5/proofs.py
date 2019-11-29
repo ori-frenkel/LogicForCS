@@ -564,7 +564,7 @@ def array_number_adder(arr, shift_by):
 def helper_part3(new_lines, shift_by : int, curr_line : Proof.Line):
 
     try:
-        if curr_line.rule:
+        if curr_line.rule is None or curr_line.rule is not None:
             new_lines.append(Proof.Line(curr_line.formula,curr_line.rule,
                                         array_number_adder(
                                             curr_line.assumptions,
@@ -608,8 +608,8 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
         total_rules.append(rule)
     for rule in lemma_proof.rules:
         total_rules.append(rule)
-    if lemma_proof.statement in total_rules:
-        total_rules.remove(lemma_proof.statement)
+    # if lemma_proof.statement in total_rules:
+    #     total_rules.remove(lemma_proof.statement)
 
     new_lines = list()
     # same n-1 lines (part a from guidance)
@@ -625,9 +625,9 @@ def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
                     else:
                         for idx2, proof_line in enumerate(main_proof.lines):
                             # only line that before current line in the main proof
-                            if idx >= line_number:
+                            if idx2 >= line_number:
                                 break
-                            if proof_line == lemma_line:
+                            if proof_line.formula == lemma_line.formula:
                                 helper_part3(new_lines, line_number ,proof_line)
                                 break
                 else:
