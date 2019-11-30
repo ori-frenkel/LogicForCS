@@ -127,9 +127,6 @@ def combine_proofs(antecedent1_proof: Proof, antecedent2_proof: Proof,
     # second MP (and than finished).
     all_lines.append(Proof.Line(consequent, MP, [part2_idx - 1, count - 1]))
 
-    print("--------------------------------------------------------------\n",
-          Proof(statement, all_rules, all_lines))
-
     return Proof(statement, all_rules, all_lines)
 
 def remove_assumption(proof: Proof) -> Proof:
@@ -157,6 +154,105 @@ def remove_assumption(proof: Proof) -> Proof:
     for rule in proof.rules:
         assert rule == MP or len(rule.assumptions) == 0
     # Task 5.4
+    tmp = 0
+    last_assumption = proof.statement.assumptions[-1]
+    # the new set of assumption is : (same without last assumption)
+    assumption_without_last = proof.statement.assumptions[:-1]
+    new_statement = InferenceRule(assumption_without_last, Formula('->', last_assumption, proof.statement.conclusion))
+    all_lines = list()
+    count = 0
+    first = True
+    shift_from_line = 0
+    shift_by = 0
+    new_lines_of_proof = list()
+    for idx,line in enumerate(proof.lines):
+        # we want to prove that 'p->statement.conclusion' where p is the
+        #  last assumption
+        if line.formula == last_assumption:
+            # if it is the assumption that we  removed from the
+            # list of assumption (lest call it p)
+            # we can write '(p->p)' and its valid from I0
+            all_lines.append(Proof.Line(
+                Formula('->', last_assumption, last_assumption),
+                I0, []))
+            new_lines_of_proof.append(idx + tmp)
+            count += 1
+
+        elif line in assumption_without_last or line.rule != MP:
+            # I would mark the assumption by 'q'
+            all_lines.append(line) # adding the assumption it self
+                                   #  or the rule (without assumption)
+            tmp +=1
+            count+=1
+            shift_by +=1
+            #(q->(p->q)), lets mark part2 = (p->q)
+            part2 = Formula('->',last_assumption,line.formula)
+            pqp = Formula('->', line.formula, part2)
+            if first:
+                shift_from_line = count
+                first = False
+
+            shift_line_assumptions(all_lines, shift_by,
+                                   Proof.Line(pqp, I1, []),
+                                   shift_from_line, True)
+            # all_lines.append(Proof.Line(pqp, I1, []))
+            tmp +=1
+            count +=1
+            shift_by += 1
+            # no need to shift, using the last two lines.
+            all_lines.append(Proof.Line(part2, MP , [(count - 2), (count - 1)]))
+            new_lines_of_proof.append(idx + tmp)
+            count +=1
+
+        else: # list rule is MP
+            # ((p ->(a->b))->((p->a)->(p->b)))
+            # part3 = ((p ->(a->b))
+            # part4 = (p->a)
+            # part5 = (p->b)
+            idx1,idx2 = [0,0]
+            if line.assumptions[0] >= shift_from_line:
+                part3 = all_lines[line.assumptions[0] + shift_by]
+                idx1 = line.assumptions[0] + shift_by
+            else:
+                part3 = all_lines[line.assumptions[0]]
+                idx1 = line.assumptions[0]
+            if line.assumptions[1] >= shift_from_line:
+                part4 = all_lines[line.assumptions[1] + shift_by - 1]
+                idx2 = line.assumptions[1] + shift_by
+            else:
+                part4 = all_lines[line.assumptions[1]]
+                idx2 = line.assumptions[1]
+            part5 = Formula("->", last_assumption , line.formula)
+
+            all_lines.append(Proof.Line(Formula('->', part3.formula, Formula('->',part4.formula,part5)), D, []))
+            tmp +=1
+            count+=1
+            shift_by+=1
+            all_lines.append(Proof.Line(Formula('->',part4.formula,part5), MP, [idx2, count-1]))
+            tmp+=1
+            count +=1
+            shift_by +=1
+            all_lines.append(Proof.Line(part5, MP, [idx1, count - 1]))
+            new_lines_of_proof.append(idx + tmp)
+            count+=1
+            shift_by +=1
+
+
+    # adding to the rules I0,I1,D,MP
+    rule_to_append = [I0,I1,D,MP]
+    new_rules = list()
+    for rule in proof.rules:
+        if rule in rule_to_append:
+            continue
+        new_rules.append(rule)
+    for rule in rule_to_append:
+        new_rules.append(rule)
+
+    return Proof(new_statement, new_rules, all_lines)
+
+
+
+
 
 def proof_from_inconsistency(proof_of_affirmation: Proof,
                              proof_of_negation: Proof, conclusion: Formula) -> \
