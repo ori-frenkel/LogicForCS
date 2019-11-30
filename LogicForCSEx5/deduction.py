@@ -129,6 +129,15 @@ def combine_proofs(antecedent1_proof: Proof, antecedent2_proof: Proof,
 
     return Proof(statement, all_rules, all_lines)
 
+# this function gets new_line_proof which hold the index of the new line
+# meaning : new_lines_of_proof[1] -> will return the line number of p->a
+#  where a is what what was in old proof
+def convert_assumption_line(new_line_proof, old_proof_idx):
+    to_return = list()
+    for idx in old_proof_idx:
+        to_return.append(new_line_proof[idx])
+    return to_return
+
 def remove_assumption(proof: Proof) -> Proof:
     """Converts a proof of some `conclusion` formula, the last assumption of
     which is an assumption `assumption`, into a proof of
@@ -154,16 +163,16 @@ def remove_assumption(proof: Proof) -> Proof:
     for rule in proof.rules:
         assert rule == MP or len(rule.assumptions) == 0
     # Task 5.4
-    tmp = 0
+    # count - represent the number of line that we added so far compare to the
+    #         original proof.
+    count = 0
     last_assumption = proof.statement.assumptions[-1]
     # the new set of assumption is : (same without last assumption)
     assumption_without_last = proof.statement.assumptions[:-1]
     new_statement = InferenceRule(assumption_without_last, Formula('->', last_assumption, proof.statement.conclusion))
     all_lines = list()
-    count = 0
-    first = True
-    shift_from_line = 0
-    shift_by = 0
+    # represent at the arr[1] = the index in the new proof where p->a
+    # where a is old_proof[1] = a
     new_lines_of_proof = list()
     for idx,line in enumerate(proof.lines):
         # we want to prove that 'p->statement.conclusion' where p is the
@@ -175,67 +184,56 @@ def remove_assumption(proof: Proof) -> Proof:
             all_lines.append(Proof.Line(
                 Formula('->', last_assumption, last_assumption),
                 I0, []))
-            new_lines_of_proof.append(idx + tmp)
-            count += 1
+            new_lines_of_proof.append(idx + count)
+
 
         elif line in assumption_without_last or line.rule != MP:
             # I would mark the assumption by 'q'
             all_lines.append(line) # adding the assumption it self
                                    #  or the rule (without assumption)
-            tmp +=1
-            count+=1
-            shift_by +=1
+            count +=1
+
             #(q->(p->q)), lets mark part2 = (p->q)
             part2 = Formula('->',last_assumption,line.formula)
             pqp = Formula('->', line.formula, part2)
-            if first:
-                shift_from_line = count
-                first = False
 
-            shift_line_assumptions(all_lines, shift_by,
-                                   Proof.Line(pqp, I1, []),
-                                   shift_from_line, True)
+            all_lines.append(Proof.Line(pqp, I1, []))
+
             # all_lines.append(Proof.Line(pqp, I1, []))
-            tmp +=1
-            count +=1
-            shift_by += 1
-            # no need to shift, using the last two lines.
-            all_lines.append(Proof.Line(part2, MP , [(count - 2), (count - 1)]))
-            new_lines_of_proof.append(idx + tmp)
             count +=1
 
-        else: # list rule is MP
+            # no need to shift, using the last two lines.
+            all_lines.append(Proof.Line(part2, MP , [(len(all_lines) - 2), (len(all_lines) - 1)]))
+            new_lines_of_proof.append(idx + count)
+
+
+        else: # line rule is MP
             # ((p ->(a->b))->((p->a)->(p->b)))
             # part3 = ((p ->(a->b))
             # part4 = (p->a)
             # part5 = (p->b)
-            idx1,idx2 = [0,0]
-            if line.assumptions[0] >= shift_from_line:
-                part3 = all_lines[line.assumptions[0] + shift_by]
-                idx1 = line.assumptions[0] + shift_by
-            else:
-                part3 = all_lines[line.assumptions[0]]
-                idx1 = line.assumptions[0]
-            if line.assumptions[1] >= shift_from_line:
-                part4 = all_lines[line.assumptions[1] + shift_by - 1]
-                idx2 = line.assumptions[1] + shift_by
-            else:
-                part4 = all_lines[line.assumptions[1]]
-                idx2 = line.assumptions[1]
+
+
+            part3 = all_lines[new_lines_of_proof[line.assumptions[1]]]
+
+            part4 = all_lines[new_lines_of_proof[line.assumptions[0]]]
+
             part5 = Formula("->", last_assumption , line.formula)
 
-            all_lines.append(Proof.Line(Formula('->', part3.formula, Formula('->',part4.formula,part5)), D, []))
-            tmp +=1
-            count+=1
-            shift_by+=1
-            all_lines.append(Proof.Line(Formula('->',part4.formula,part5), MP, [idx2, count-1]))
-            tmp+=1
+            all_lines.append(Proof.Line(Formula('->', part3.formula,
+                                                Formula('->',part4.formula,part5))
+                                        , D, []))
             count +=1
-            shift_by +=1
-            all_lines.append(Proof.Line(part5, MP, [idx1, count - 1]))
-            new_lines_of_proof.append(idx + tmp)
+
+            all_lines.append(Proof.Line(Formula('->',part4.formula,part5), MP,
+                                        [new_lines_of_proof[line.assumptions[1]]
+                                            , len(all_lines)-1]))
             count+=1
-            shift_by +=1
+
+            all_lines.append(Proof.Line(part5, MP,
+                                        [new_lines_of_proof[line.assumptions[0]],
+                                         len(all_lines) - 1]))
+            new_lines_of_proof.append(idx + count)
 
 
     # adding to the rules I0,I1,D,MP
