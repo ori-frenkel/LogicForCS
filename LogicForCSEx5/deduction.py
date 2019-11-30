@@ -337,3 +337,49 @@ def prove_by_contradiction(proof: Proof) -> Proof:
     for rule in proof.rules:
         assert rule == MP or len(rule.assumptions) == 0
     # Task 5.7
+
+    all_lines = list()
+    rules = list()
+    for rule in proof.rules:
+        if rule == MP:
+            continue
+        rules.append(rule)
+    for rule in [I0,I1,D,N,MP]:
+        rules.append(rule)
+
+    conclusion = proof.statement.assumptions[-1].first
+    q = conclusion
+    assumptions = proof.statement.assumptions[:-1]
+    statement = InferenceRule(assumptions, conclusion)
+
+    # proof where the conclusion is :
+    # (proof.last_assumption -> proof.conclusion) with out the last
+    # assumption as assumption (~q->conclusion) = (~q->~(p->p))
+    # we want to prove 'q' (formula/last assumption) - conclusion
+    remove_last_assumption_proof = remove_assumption(proof)
+
+    # in order to prove 'q' from remove_last_assumption (~q->~(p->p))
+    # I would need to prove the following lemma : assumption : ~q->~(p->p)
+    #                                             conclusion : q
+    for line in remove_last_assumption_proof.lines:
+        all_lines.append(line)
+    last_line = len(all_lines) # this line contain (~q->~(p->p))
+
+    # adding ((~q->~(p->p))->((p->p)->q) using N axiom with the
+    # map {q:'q' ,p:'(p->p)'}
+    # which is :
+    part2 = Formula('->', Formula.parse("(p->p)"), q)
+    formula_to_add = Formula('->', all_lines[last_line - 1].formula, part2)
+    all_lines.append(Proof.Line(formula_to_add, N, []))
+
+    # using MP on the last two line would get ((p->p)->q)
+    all_lines.append(Proof.Line(part2, MP, [len(all_lines) - 2 , len(all_lines) - 1]))
+
+    # using IO (p->p)
+    all_lines.append(Proof.Line(Formula('->', Formula('p'), Formula('p')),
+                                I0, []))
+
+    # using MP of the last two lines will get 'q' which the final result.
+    all_lines.append(Proof.Line(q, MP, [len(all_lines) - 1, len(all_lines) - 2]))
+
+    return Proof(statement, rules, all_lines)

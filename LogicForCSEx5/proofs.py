@@ -554,7 +554,7 @@ def prove_specialization(proof: Proof, specialization: InferenceRule) -> Proof:
     return Proof(specialization_statement,proof.rules, new_lines)
 
 # getting array and shift all the numbers inside by 'shift_by'
-def array_number_adder(arr, shift_by, line_number, only_after_shift_by_line = False):
+def array_number_adder(arr, shift_by, line_number = 0, only_after_shift_by_line = False):
     l_array = list()
     for i in range(len(arr)):
         if only_after_shift_by_line and arr[i] < line_number:
