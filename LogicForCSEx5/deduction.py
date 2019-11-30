@@ -249,9 +249,6 @@ def remove_assumption(proof: Proof) -> Proof:
     return Proof(new_statement, new_rules, all_lines)
 
 
-
-
-
 def proof_from_inconsistency(proof_of_affirmation: Proof,
                              proof_of_negation: Proof, conclusion: Formula) -> \
         Proof:
@@ -277,6 +274,41 @@ def proof_from_inconsistency(proof_of_affirmation: Proof,
            proof_of_negation.statement.conclusion
     assert proof_of_affirmation.rules == proof_of_negation.rules
     # Task 5.6
+    all_lines = list()
+    rules = list()
+    for rule in proof_of_affirmation.rules:
+        rules.append(rule)
+    rules.append(I2)
+    rules.append(MP)
+    # I mark the conclusion as 'q' in my explanation
+    statement = InferenceRule(proof_of_affirmation.statement.assumptions, conclusion)
+    # adding all of the affirmation proof
+    for line in proof_of_affirmation.lines:
+        all_lines.append(line)
+    shift_by = len(all_lines)
+    affirmation_last_line = shift_by
+    # shift by is the last line of the affirmation proof an contain 'p'
+    # adding all of the negation proof
+    for line in proof_of_negation.lines:
+        shift_line_assumptions(all_lines, shift_by, line)
+    # last line contain '~p'
+    negation_last_line = len(all_lines)
+
+    # using I2 and than twice MP
+    # formula of using I2 is : (~p->(p->q))
+    p_q = Formula('->', all_lines[affirmation_last_line - 1].formula,
+                  conclusion) # (p->q)
+
+    not_p = all_lines[negation_last_line - 1].formula # ~p
+    i2_formula = Formula('->', not_p, p_q) # (~p->(p->q))
+    all_lines.append(Proof.Line(i2_formula, I2, []))
+    # using first time MP to get (p->q)
+    all_lines.append(Proof.Line(p_q, MP, [(len(all_lines) - 2),
+                                          (len(all_lines) - 1)]))
+    # using the second and last MP to get q
+    all_lines.append(Proof.Line(conclusion, MP, [affirmation_last_line - 1,len(all_lines) - 1]))
+
+    return Proof(statement, rules, all_lines)
 
 def prove_by_contradiction(proof: Proof) -> Proof:
     """Converts the given proof of ``'~(p->p)'``, the last assumption of which
