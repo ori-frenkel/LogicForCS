@@ -333,9 +333,12 @@ def prove_sound_inference(rule: InferenceRule) -> Proof:
                                     [len(all_lines) - 1, len(all_lines) - 2]))
 
         # it would look like:
-        # Line n :     (p1->(p2->(p3->(p4->q))))
+        # Line n :      (p1->(p2->(p3->(p4->q))))
         # Line n + 1 :  p1
-        # Line n+2   :   (p2->(p3->(p4->q)) (MP on the last two lines)
+        # Line n+2   :  (p2->(p3->(p4->q)) (MP on the last two lines)
+        # Line n+3   :  q2
+        # Line n+4   :  (p3->(p4->q)
+        # Line n+5   :  p3  and so on, till q is proved.
 
     return Proof(statement, AXIOMATIC_SYSTEM, all_lines)
 
@@ -357,6 +360,27 @@ def model_or_inconsistency(formulae: List[Formula]) -> Union[Model, Proof]:
     for formula in formulae:
         assert formula.operators().issubset({'->', '~'})
     # Task 6.5
+
+    # all_var - union of all the variables in all of the formulas
+    all_var = set()
+    for form in formulae:
+        for var in form.variables():
+            all_var.add(var)
+
+    for model in all_models(list(all_var)):
+        for idx,form in enumerate(formulae):
+            if not evaluate(form, model):
+                break
+            # if got to the last formula, and it evaluate to true as well,
+            # than on this model all formula holds
+            if idx == len(formulae) - 1:
+                return model
+    # if got here, than there isn't a model on which all formula holds
+    # therefor, from False we can prove anything, even false things.
+    # therefor prove_sound_inference would give us a proof for False thing
+    # (because the assumption are False for every model)
+    # F -> anything even False
+    return prove_sound_inference(InferenceRule(formulae, Formula.parse("~(p->p)")))
 
 def prove_in_model_full(formula: Formula, model: Model) -> Proof:
     """Either proves the given formula or proves its negation, from the formulae
