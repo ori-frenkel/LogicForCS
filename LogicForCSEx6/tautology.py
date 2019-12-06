@@ -315,6 +315,27 @@ def prove_sound_inference(rule: InferenceRule) -> Proof:
     for formula in rule.assumptions + (rule.conclusion,):
         assert formula.operators().issubset({'->', '~'})
     # Task 6.4b
+    # rules AXIOMATIC_SYSTEM
+    statement  = rule
+    encoded_formula = encode_as_formula(rule) # = (p1->(p2->(p3->(p4->q))))
+    # all lines = proof where the last line is : (p1->(p2->(p3->(p4->q))))
+    all_lines = list(prove_tautology(encode_as_formula(rule), {}).lines)
+    # using MP we would be able to get q
+    # running on assumption p1 and than p2, ....p4
+    for assumption in rule.assumptions:
+        # for example, all_line.add(p1)
+        all_lines.append(Proof.Line(assumption))
+        # adding to all_lines (p2->(p3->(p4->q))) (proven by MP and the
+        # last 2 lines)
+        # and update the encoded_formula to it
+        encoded_formula = encoded_formula.second # (p2->(p3->(p4->q)))
+        all_lines.append(Proof.Line(encoded_formula, MP,
+                                    [len(all_lines) - 1, len(all_lines) - 2]))
+
+
+    return Proof(statement, AXIOMATIC_SYSTEM, all_lines)
+
+
 
 def model_or_inconsistency(formulae: List[Formula]) -> Union[Model, Proof]:
     """Either finds a model in which all the given formulae hold, or proves
