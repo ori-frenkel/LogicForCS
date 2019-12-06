@@ -253,6 +253,17 @@ def proof_or_counterexample(formula: Formula) -> Union[Proof, Model]:
     """
     assert formula.operators().issubset({'->', '~'})
     # Task 6.3b
+    if is_tautology(formula):
+        # if it tautology, return a proof
+        return prove_tautology(formula, {})
+    else:
+        # if its not tautology, than there must be a model which the formula
+        # doesn't hold.
+        # iterating over all model, till finding model which the formula
+        # doesn't hold upon.
+        for model in all_models(list(formula.variables())):
+            if not evaluate(formula, model):
+                return model
 
 def encode_as_formula(rule: InferenceRule) -> Formula:
     """Encodes the given inference rule as a formula consisting of a chain of
