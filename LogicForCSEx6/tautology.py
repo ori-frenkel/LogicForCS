@@ -218,6 +218,26 @@ def prove_tautology(tautology: Formula, model: Model = frozendict()) -> Proof:
     assert sorted(tautology.variables())[:len(model)] == sorted(model.keys())
     # Task 6.3a
 
+    statement = InferenceRule(formulae_capturing_model(model), tautology)
+
+    # rules are AXIOMATIC_SYSTEM
+    list_of_var_in_formula = list(tautology.variables())
+    list_of_var_in_formula.sort()
+    for var in list_of_var_in_formula:
+        if var not in model:
+            new_model = dict(model)
+            new_model[var] = True
+            # proof 1 is with that var with value True
+            proof1 = prove_tautology(tautology, new_model)
+            new_model[var] = False
+            # proof 2 is with that var with value False
+            proof2 = prove_tautology(tautology, new_model)
+            # proof without that var
+            return reduce_assumption(proof1, proof2)
+
+    # if the model contains all the var in the tautology formula
+    return prove_in_model(tautology, model)
+
 def proof_or_counterexample(formula: Formula) -> Union[Proof, Model]:
     """Either proves the given formula or finds a model in which it does not
     hold.
