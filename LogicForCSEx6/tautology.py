@@ -166,6 +166,11 @@ def reduce_assumption(proof_from_affirmation: Proof,
     assert proof_from_affirmation.rules == proof_from_negation.rules
     # Task 6.2
     # copying the same rules in addition to MP, I0, I1, D, R
+    all_rules = set()
+    for rule in proof_from_affirmation.rules:
+        all_rules.add(rule)
+    for rule in [MP, I0, I1, D, R]:
+        all_rules.add(rule)
 
     # proof of (p->(q->(q->p)))
     proof_affirmation_remove_last_assumption =\
@@ -175,11 +180,13 @@ def reduce_assumption(proof_from_affirmation: Proof,
     proof_negation_remove_last_assumption =\
         remove_assumption(proof_from_negation)
 
-    # using D, and both of the above proofs,  we can prove the conclusion
-    # without the last assumption
-    return combine_proofs(proof_affirmation_remove_last_assumption,
-                          proof_negation_remove_last_assumption,
+    # using D, and both of the above proofs, we can prove the conclusion
+    #  without the last assumption
+    combined_proof = combine_proofs(proof_affirmation_remove_last_assumption,
+                                    proof_negation_remove_last_assumption,
                           proof_from_affirmation.statement.conclusion, R)
+
+    return Proof(combined_proof.statement, all_rules, combined_proof.lines)
 
 
 
