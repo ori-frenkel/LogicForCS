@@ -258,12 +258,20 @@ def proof_or_counterexample(formula: Formula) -> Union[Proof, Model]:
         return prove_tautology(formula, {})
     else:
         # if its not tautology, than there must be a model which the formula
-        # doesn't hold.
+        # doesn't hold upon.
         # iterating over all model, till finding model which the formula
         # doesn't hold upon.
         for model in all_models(list(formula.variables())):
             if not evaluate(formula, model):
                 return model
+
+# lst is a union of assumptions and conclusion
+# this function returning the formula encode
+# meaning : (p1->(p2->(p3->(p4->q))))
+def encode_helper(lst):
+    if len(lst) > 1:
+        return Formula('->', lst[0], encode_helper(lst[1:]))
+    return lst[0]
 
 def encode_as_formula(rule: InferenceRule) -> Formula:
     """Encodes the given inference rule as a formula consisting of a chain of
@@ -284,6 +292,13 @@ def encode_as_formula(rule: InferenceRule) -> Formula:
         q
     """
     # Task 6.4a
+    union_assumptions_conclusion = list()
+    for assumption in rule.assumptions:
+        union_assumptions_conclusion.append(assumption)
+    union_assumptions_conclusion.append(rule.conclusion)
+
+    return encode_helper(union_assumptions_conclusion)
+
 
 def prove_sound_inference(rule: InferenceRule) -> Proof:
     """Proves the given sound inference rule.
