@@ -67,6 +67,62 @@ def prove_in_model(formula: Formula, model:Model) -> Proof:
     assert formula.operators().issubset({'->', '~'})
     assert is_model(model)
     # Task 6.1b
+    all_lines = list()
+
+    # CASE 1 : handle case as x where x is variable
+    if is_variable(str(formula)):
+        if evaluate(formula, model):
+            # if the var evaluate to True in the model
+            all_lines.append(Proof.Line(formula))
+            statement = InferenceRule(formulae_capturing_model(model), formula)
+            return Proof(statement, AXIOMATIC_SYSTEM, all_lines)
+        else:
+            # if the var evaluate to False in the model
+            all_lines.append(Proof.Line(Formula('~',formula)))
+        statement = InferenceRule(formulae_capturing_model(model), Formula('~',formula))
+        return Proof(statement, AXIOMATIC_SYSTEM, all_lines)
+
+    # CASE 2 : (p->q):
+    elif formula.root == '->':
+        # formula p->q evaluate to True in the given model
+        if evaluate(formula, model):
+            # there are 2 cases : or p evaluate to False, or q eval to True
+            if not evaluate(formula.first, model):
+                # case where p eval to False
+                # proof1 is proof of 'p'
+                proof1 = prove_in_model(Formula('~', formula.first), model)
+                # using I2
+                return prove_corollary(proof1, formula, I2)
+            else:
+                # case where q eval to True
+                proof1 = prove_in_model(formula.second, model)
+                return prove_corollary(proof1, formula, I1)
+
+        # formula f = (p->q) evaluate to False in the given model
+        # therefor p eval to True and q eval to False
+        # than we want to prove ~f = ~(p->q) , NI does exactly that.
+        # NI = (p->(~q->~(p->q)))
+        else:
+            prove_p = prove_in_model(formula.first, model)
+            prove_not_q = prove_in_model(Formula('~',formula.second), model)
+            # ~f = ~(p->q) = Formula('~', formula)
+            combined = combine_proofs(prove_p, prove_not_q, Formula('~', formula), NI)
+            return combined
+    # case 3
+    else:
+        # must be f = ~g
+        assert (formula.root == '~')
+        if evaluate(formula, model):
+            # if f is True than ~g = True ---> g = False
+            return prove_in_model(formula.first, model)
+        else:
+            # if f is False than ~g is False --> g = True
+            # prove g, than using NN we would get ~~g, which is ~f -> True
+            prove_g = prove_in_model(formula.first, model)
+            # from g, using NN we prove ~~g = ~formula = ~f
+            return prove_corollary(prove_g, Formula('~', formula), NN)
+
+    # return Proof(statement, AXIOMATIC_SYSTEM, all_lines)
 
 def reduce_assumption(proof_from_affirmation: Proof,
                       proof_from_negation: Proof) -> Proof:
