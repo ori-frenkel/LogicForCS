@@ -43,7 +43,7 @@ def is_constant(s: str) -> bool:
 # any number or char
 def is_alphanumeric(_str : str):
     for char in _str:
-        if not (char.isdigit() or char.isdigit()):
+        if not (char.isalpha() or char.isdigit()):
             return False
     return True
 
@@ -480,6 +480,70 @@ class Formula:
             name (and not just a part of it, such as ``'x1'``).
         """
         # Task 7.4.1
+        # An equality of the form ‘t1=t2’, where t1 and t2 are valid terms.
+        if is_constant(s[0]) or is_function(s[0]) or is_variable(s[0]):
+            term1 , _suffix1 = Term.parse_prefix(s)
+            term2, _suffix2 = Term.parse_prefix(_suffix1[1:])
+            return Formula('=', [term1, term2]), _suffix2
+
+        if is_relation(s[0]):
+            lst_arg = list()
+            # parsing the name of the relation
+            relation_name = s[0]
+            s = s[1:]
+            lst_idx = 1
+            for idx, char in enumerate(s):
+                if is_alphanumeric(char):
+                    relation_name += char
+                else:
+                    lst_idx = idx
+                    break
+            s = s[lst_idx:]
+            assert s[0] == '(' # we can assume prefix that is a valid
+            s = s[1:]
+            # parsing the arguments of the relation
+            # case of R()
+            if s[0] == ")":
+                return Formula(relation_name, []), s[1:]
+            _term, _remainder = Term.parse_prefix(s)
+            while _remainder[0] == ",":
+                lst_arg.append(_term)
+                _term, _remainder = Term.parse_prefix(_remainder[1:])
+            lst_arg.append(_term)
+            if len(_remainder) > 1:
+                return Formula(relation_name, lst_arg), _remainder[1:]
+            else:
+                return Formula(relation_name, lst_arg), ""
+
+        if is_unary(s[0]):
+            _prefix, _suffix = Formula.parse_prefix(s[1:])
+            return Formula('~', _prefix), _suffix
+
+        # case where is (f1*f2) where * is binary operation
+        if s[0] == '(':
+            f1, _suffix1 = Formula.parse_prefix(s[1:])
+            # when the binary operator is : '&' or '|'
+            if is_binary(_suffix1[0]):
+                operator = _suffix1[0]
+                f2, _suffix2 = Formula.parse_prefix(_suffix1[1:])
+                return Formula(operator, f1,f2), _suffix2[1:]
+            else: # case of '->'
+                f2, _suffix2 = Formula.parse_prefix(_suffix1[2:])
+                return Formula('->', f1, f2), _suffix2[1:]
+
+        # quantification
+        else:
+            assert s[0] == 'A' or s[0] == 'E'
+            quantifier = s[0]
+            s = s[1:]
+            var_name = ""
+            for idx,char in enumerate(s):
+                if char == '[':
+                    var_name = s[:idx]
+                    s = s[idx:]
+                    break
+            formula, _suffix = Formula.parse_prefix(s[1:])
+            return Formula(quantifier, var_name, formula), _suffix[1:]
 
     @staticmethod
     def parse(s: str) -> Formula:
