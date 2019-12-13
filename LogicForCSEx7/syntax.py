@@ -40,6 +40,13 @@ def is_constant(s: str) -> bool:
     return  (((s[0] >= '0' and s[0] <= '9') or (s[0] >= 'a' and s[0] <= 'd'))
              and s.isalnum()) or s == '_'
 
+# any number or char
+def is_alphanumeric(_str : str):
+    for char in _str:
+        if not (char.isdigit() or char.isdigit()):
+            return False
+    return True
+
 def is_variable(s: str) -> bool:
     """Checks if the given string is a variable name.
 
@@ -161,6 +168,39 @@ class Term:
             that entire name (and not just a part of it, such as ``'x1'``).
         """
         # Task 7.3.1
+        # constant name '_'
+        if s[0] == '_':
+            return Term('_'), s[1:]
+        if is_constant(s[0]) or is_variable(s[0]):
+            term = s[0]
+            if len(s) == 1:
+                return Term(term), ""
+            for idx,char in enumerate(s[1:]):
+                if is_alphanumeric(char):
+                    term += char
+                else:
+                    return Term(term), s[idx + 1:]
+            # if got here the remainder is empty
+            return Term(term), ""
+        # else - must be function
+        else:
+            assert is_function(s[0])
+            function_name = s[0]
+
+            idx_start = 0 # idx of '(' in function
+            for idx,char in enumerate(s[1:]):
+                if char != '(':
+                    function_name += char
+                else:
+                    idx_start = idx
+                    break
+            _term, _remainder = Term.parse_prefix(s[idx_start + 2:])
+            tuple_to_return = list()
+            tuple_to_return.append(_term)
+            while _remainder[0] != ')':
+                _term, _remainder = Term.parse_prefix(_remainder[1:])
+                tuple_to_return.append(_term)
+            return Term(function_name, tuple_to_return), _remainder[1:]
 
     @staticmethod
     def parse(s: str) -> Term:
