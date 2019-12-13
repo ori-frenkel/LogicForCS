@@ -222,6 +222,15 @@ class Term:
             A set of all constant names used in the current term.
         """
         # Task 7.5.1
+        lst_of_constant = list()
+        if is_constant(self.root):
+            lst_of_constant.append(self.root)
+        try:
+            for _term in self.arguments:
+                lst_of_constant += _term.constants()
+        except AttributeError:
+            pass
+        return set(lst_of_constant)
 
     def variables(self) -> Set[str]:
         """Finds all variable names in the current term.
@@ -230,6 +239,16 @@ class Term:
             A set of all variable names used in the current term.
         """
         # Task 7.5.2
+        lst_of_constant = list()
+        if is_variable(self.root):
+            lst_of_constant.append(self.root)
+        try:
+            for _term in self.arguments:
+                lst_of_constant += _term.variables()
+        except AttributeError:
+            pass
+        return set(lst_of_constant)
+
 
     def functions(self) -> Set[Tuple[str, int]]:
         """Finds all function names in the current term, along with their
@@ -240,6 +259,15 @@ class Term:
             all function names used in the current term.
         """
         # Task 7.5.3
+        lst_of_constant = list()
+        if is_function(self.root):
+            lst_of_constant.append((self.root, len(self.arguments), ))
+        try:
+            for _term in self.arguments:
+                lst_of_constant += _term.functions()
+        except AttributeError:
+            pass
+        return set(lst_of_constant)
 
     def substitute(self, substitution_map: Mapping[str, Term],
                    forbidden_variables: AbstractSet[str] = frozenset()) -> Term:
