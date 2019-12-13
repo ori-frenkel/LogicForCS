@@ -593,6 +593,34 @@ class Formula:
             A set of all constant names used in the current formula.
         """
         # Task 7.6.1
+        lst_of_constants = list()
+        if is_constant(self.root):
+            lst_of_constants.append(self.root)
+        try:
+            for _term in self.arguments:
+                lst_of_constants += _term.constants()
+        except AttributeError:
+            pass
+        try:
+            lst_of_constants += self.first.constants()
+        except AttributeError:
+            pass
+        try:
+            lst_of_constants += self.second.constants()
+        except AttributeError:
+            pass
+        try:
+            lst_of_constants += self.predicate.constants()
+        except AttributeError:
+            pass
+        # probably need to delete this
+        # try:
+        #     for var in self.variable:
+        #         if is_constant(var):
+        #             lst_of_constants += self.variables
+        # except AttributeError:
+        #     pass
+        return set(lst_of_constants)
 
     def variables(self) -> Set[str]:
         """Finds all variable names in the current formula.
@@ -601,6 +629,33 @@ class Formula:
             A set of all variable names used in the current formula.
         """
         # Task 7.6.2
+        lst_of_variables = list()
+        if is_variable(self.root):
+            lst_of_variables.append(self.root)
+        try:
+            for _term in self.arguments:
+                lst_of_variables += _term.variables()
+        except AttributeError:
+            pass
+        try:
+            lst_of_variables += self.first.variables()
+        except AttributeError:
+            pass
+        try:
+            lst_of_variables += self.second.variables()
+        except AttributeError:
+            pass
+        try:
+            lst_of_variables += self.predicate.variables()
+        except AttributeError:
+            pass
+
+        try:
+            for var in self.variable:
+                lst_of_variables.append(var)
+        except AttributeError:
+            pass
+        return set(lst_of_variables)
 
     def free_variables(self) -> Set[str]:
         """Finds all variable names that are free in the current formula.
@@ -610,6 +665,33 @@ class Formula:
             within a scope of a quantification on those variable names.
         """
         # Task 7.6.3
+        lst_of_variables = set()
+        if is_quantifier(self.root):
+            for var in self.predicate.free_variables():
+                lst_of_variables.add(var)
+            # remove e.g Ax(Q(x,w)) - removing x as its not free var
+            if self.variable in lst_of_variables:
+                lst_of_variables.remove(self.variable)
+        elif is_function(self.root):
+            for var in self.arguments:
+                lst_of_variables.add(var.variables())
+        elif is_binary(self.root):
+            for var in self.first.free_variables():
+                lst_of_variables.add(var)
+            for var in self.second.free_variables():
+                lst_of_variables.add(var)
+        elif is_relation(self.root) or is_equality(self.root):
+            for _term in self.arguments:
+                for var in _term.variables():
+                    lst_of_variables.add(var)
+        elif is_unary(self.root):
+            for var in self.first.free_variables():
+                lst_of_variables.add(var)
+        else:
+            if is_variable(self.root):
+                lst_of_variables.add(self.root)
+
+        return lst_of_variables
 
     def functions(self) -> Set[Tuple[str, int]]:
         """Finds all function names in the current formula, along with their
