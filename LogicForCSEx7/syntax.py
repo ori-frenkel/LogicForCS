@@ -703,6 +703,34 @@ class Formula:
             all function names used in the current formula.
         """
         # Task 7.6.4
+        set_of_functions = set()
+        if is_unary(self.root):
+            for func_tuple in self.first.functions():
+                set_of_functions.add(func_tuple)
+
+        elif is_binary(self.root):
+            for func_tuple in self.first.functions():
+                set_of_functions.add(func_tuple)
+            for func_tuple in self.second.functions():
+                set_of_functions.add(func_tuple)
+
+        elif is_relation(self.root) or is_equality(self.root):
+            for _term in self.arguments:
+                for func_tuple in _term.functions():
+                    set_of_functions.add(func_tuple)
+
+        elif is_function(self.root):
+            for _term in self.arguments:
+                set_of_functions.add((self.root, len(self.arguments)))
+
+        elif is_quantifier(self.root):
+            for var in self.predicate.functions():
+                set_of_functions.add(var)
+        else:
+            if is_function(self.root):
+                set_of_functions.add((self.root, len(self.arguments)))
+
+        return set_of_functions
 
     def relations(self) -> Set[Tuple[str, int]]:
         """Finds all relation names in the current formula, along with their
@@ -713,6 +741,30 @@ class Formula:
             all relation names used in the current formula.
         """
         # Task 7.6.5
+        set_of_relations = set()
+
+        if is_relation(self.root):
+            set_of_relations.add((self.root, len(self.arguments)))
+
+        elif is_unary(self.root):
+            for relations_tuple in self.first.relations():
+                set_of_relations.add(relations_tuple)
+
+        elif is_binary(self.root):
+            for relations_tuple in self.first.relations():
+                set_of_relations.add(relations_tuple)
+            for relations_tuple in self.second.relations():
+                set_of_relations.add(relations_tuple)
+
+        elif is_quantifier(self.root):
+            for _relations in self.predicate.relations():
+                set_of_relations.add(_relations)
+        else:
+            if is_function(self.root):
+                set_of_relations.add((self.root, len(self.arguments)))
+
+        return set_of_relations
+
 
     def substitute(self, substitution_map: Mapping[str, Term],
                    forbidden_variables: AbstractSet[str] = frozenset()) -> \
