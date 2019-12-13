@@ -593,34 +593,33 @@ class Formula:
             A set of all constant names used in the current formula.
         """
         # Task 7.6.1
-        lst_of_constants = list()
-        if is_constant(self.root):
-            lst_of_constants.append(self.root)
-        try:
+        set_of_constants = set()
+        if is_unary(self.root):
+            for const in self.first.constants():
+                set_of_constants.add(const)
+
+        elif is_binary(self.root):
+            for const in self.first.constants():
+                set_of_constants.add(const)
+            for const in self.second.constants():
+                set_of_constants.add(const)
+
+        elif is_relation(self.root) or is_equality(self.root):
             for _term in self.arguments:
-                lst_of_constants += _term.constants()
-        except AttributeError:
-            pass
-        try:
-            lst_of_constants += self.first.constants()
-        except AttributeError:
-            pass
-        try:
-            lst_of_constants += self.second.constants()
-        except AttributeError:
-            pass
-        try:
-            lst_of_constants += self.predicate.constants()
-        except AttributeError:
-            pass
-        # probably need to delete this
-        # try:
-        #     for var in self.variable:
-        #         if is_constant(var):
-        #             lst_of_constants += self.variables
-        # except AttributeError:
-        #     pass
-        return set(lst_of_constants)
+                for const in _term.constants():
+                    set_of_constants.add(const)
+
+        elif is_function(self.root):
+            for _term in self.arguments:
+                set_of_constants.add(_term.constants())
+
+        elif is_quantifier(self.root):
+            for const in self.predicate.constants():
+                set_of_constants.add(const)
+        else:
+            if is_constant(self.root):
+                set_of_constants.add(self.root)
+        return set_of_constants
 
     def variables(self) -> Set[str]:
         """Finds all variable names in the current formula.
@@ -629,33 +628,35 @@ class Formula:
             A set of all variable names used in the current formula.
         """
         # Task 7.6.2
-        lst_of_variables = list()
-        if is_variable(self.root):
-            lst_of_variables.append(self.root)
-        try:
-            for _term in self.arguments:
-                lst_of_variables += _term.variables()
-        except AttributeError:
-            pass
-        try:
-            lst_of_variables += self.first.variables()
-        except AttributeError:
-            pass
-        try:
-            lst_of_variables += self.second.variables()
-        except AttributeError:
-            pass
-        try:
-            lst_of_variables += self.predicate.variables()
-        except AttributeError:
-            pass
+        set_of_variables = set()
+        if is_unary(self.root):
+            for var in self.first.variables():
+                set_of_variables.add(var)
 
-        try:
-            for var in self.variable:
-                lst_of_variables.append(var)
-        except AttributeError:
-            pass
-        return set(lst_of_variables)
+        elif is_binary(self.root):
+            for var in self.first.variables():
+                set_of_variables.add(var)
+            for var in self.second.variables():
+                set_of_variables.add(var)
+
+        elif is_relation(self.root) or is_equality(self.root):
+            for _term in self.arguments:
+                for var in _term.variables():
+                    set_of_variables.add(var)
+
+        elif is_function(self.root):
+            for _term in self.arguments:
+                set_of_variables.add(_term.variables())
+
+        elif is_quantifier(self.root):
+            for var in self.predicate.variables():
+                set_of_variables.add(var)
+            set_of_variables.add(self.variable)
+        else:
+            if is_variable(self.root):
+                set_of_variables.add(self.root)
+
+        return set_of_variables
 
     def free_variables(self) -> Set[str]:
         """Finds all variable names that are free in the current formula.
