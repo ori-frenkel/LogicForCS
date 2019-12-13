@@ -109,7 +109,7 @@ class Term:
             try:
                 for idx,term in enumerate(self.arguments):
                     final_str += str(term)
-                    # avoid situation of f(a,) -
+                    # avoid situation like f(a,) - meaning
                     # if its the last arg, dont add ','
                     if idx != len(self.arguments) - 1:
                         final_str += ","
@@ -375,6 +375,26 @@ class Formula:
             The standard string representation of the current formula.
         """
         # Task 7.2
+        final_str = ""
+        if is_unary(self.root):
+            return  "~" + str(self.first)
+        elif is_binary(self.root):
+            return "(" + str(self.first) + self.root + str(self.second) + ")"
+        elif is_equality(self.root):
+            return str(self.arguments[0]) + "=" + str(self.arguments[1])
+        elif is_function(self.root) or is_relation(self.root):
+            final_str += self.root + "("
+            for idx,arg in enumerate(self.arguments):
+                final_str += str(arg)
+                if idx != len(self.arguments) - 1:
+                    final_str += ","
+            final_str += ")"
+            return final_str
+        # if root is A or E
+        elif is_quantifier(self.root):
+            return self.root + self.variable +  "[" + str(self.predicate) + "]"
+
+
 
     def __eq__(self, other: object) -> bool:
         """Compares the current formula with the given one.
