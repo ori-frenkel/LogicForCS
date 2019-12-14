@@ -108,13 +108,13 @@ class Term:
         Returns:
             The standard string representation of the current term.
         """
-        final_str = ""
         # Task 7.1
+        final_str = ""
         if is_function(self.root):
             final_str += self.root
             final_str += "("
             try:
-                for idx,term in enumerate(self.arguments):
+                for idx, term in enumerate(self.arguments):
                     final_str += str(term)
                     # avoid situation like f(a,) - meaning
                     # if its the last arg, dont add ','
@@ -175,7 +175,7 @@ class Term:
             term = s[0]
             if len(s) == 1:
                 return Term(term), ""
-            for idx,char in enumerate(s[1:]):
+            for idx, char in enumerate(s[1:]):
                 if is_alphanumeric(char):
                     term += char
                 else:
@@ -187,8 +187,8 @@ class Term:
             assert is_function(s[0])
             function_name = s[0]
 
-            idx_start = 0 # idx of '(' in function
-            for idx,char in enumerate(s[1:]):
+            idx_start = 0  # idx of '(' in function
+            for idx, char in enumerate(s[1:]):
                 if char != '(':
                     function_name += char
                 else:
@@ -215,6 +215,7 @@ class Term:
         # Task 7.3.2
         return Term.parse_prefix(s)[0]
 
+
     def constants(self) -> Set[str]:
         """Finds all constant names in the current term.
 
@@ -239,15 +240,15 @@ class Term:
             A set of all variable names used in the current term.
         """
         # Task 7.5.2
-        lst_of_constant = list()
+        lst_of_variable = list()
         if is_variable(self.root):
-            lst_of_constant.append(self.root)
+            lst_of_variable.append(self.root)
         try:
             for _term in self.arguments:
-                lst_of_constant += _term.variables()
+                lst_of_variable += _term.variables()
         except AttributeError:
             pass
-        return set(lst_of_constant)
+        return set(lst_of_variable)
 
 
     def functions(self) -> Set[Tuple[str, int]]:
@@ -259,15 +260,15 @@ class Term:
             all function names used in the current term.
         """
         # Task 7.5.3
-        lst_of_constant = list()
+        lst_of_functions = list()
         if is_function(self.root):
-            lst_of_constant.append((self.root, len(self.arguments), ))
+            lst_of_functions.append((self.root, len(self.arguments), ))
         try:
             for _term in self.arguments:
-                lst_of_constant += _term.functions()
+                lst_of_functions += _term.functions()
         except AttributeError:
             pass
-        return set(lst_of_constant)
+        return set(lst_of_functions)
 
     def substitute(self, substitution_map: Mapping[str, Term],
                    forbidden_variables: AbstractSet[str] = frozenset()) -> Term:
@@ -446,14 +447,14 @@ class Formula:
         # Task 7.2
         final_str = ""
         if is_unary(self.root):
-            return  "~" + str(self.first)
+            return "~" + str(self.first)
         elif is_binary(self.root):
             return "(" + str(self.first) + self.root + str(self.second) + ")"
         elif is_equality(self.root):
             return str(self.arguments[0]) + "=" + str(self.arguments[1])
         elif is_function(self.root) or is_relation(self.root):
             final_str += self.root + "("
-            for idx,arg in enumerate(self.arguments):
+            for idx, arg in enumerate(self.arguments):
                 final_str += str(arg)
                 if idx != len(self.arguments) - 1:
                     final_str += ","
@@ -461,9 +462,7 @@ class Formula:
             return final_str
         # if root is A or E
         elif is_quantifier(self.root):
-            return self.root + self.variable +  "[" + str(self.predicate) + "]"
-
-
+            return self.root + self.variable + "[" + str(self.predicate) + "]"
 
     def __eq__(self, other: object) -> bool:
         """Compares the current formula with the given one.
@@ -510,7 +509,7 @@ class Formula:
         # Task 7.4.1
         # An equality of the form ‘t1=t2’, where t1 and t2 are valid terms.
         if is_constant(s[0]) or is_function(s[0]) or is_variable(s[0]):
-            term1 , _suffix1 = Term.parse_prefix(s)
+            term1, _suffix1 = Term.parse_prefix(s)
             term2, _suffix2 = Term.parse_prefix(_suffix1[1:])
             return Formula('=', [term1, term2]), _suffix2
 
@@ -527,7 +526,7 @@ class Formula:
                     lst_idx = idx
                     break
             s = s[lst_idx:]
-            assert s[0] == '(' # we can assume prefix that is a valid
+            assert s[0] == '('  # we can assume prefix that is a valid
             s = s[1:]
             # parsing the arguments of the relation
             # case of R()
@@ -554,8 +553,8 @@ class Formula:
             if is_binary(_suffix1[0]):
                 operator = _suffix1[0]
                 f2, _suffix2 = Formula.parse_prefix(_suffix1[1:])
-                return Formula(operator, f1,f2), _suffix2[1:]
-            else: # case of '->'
+                return Formula(operator, f1, f2), _suffix2[1:]
+            else:  # case of '->'
                 f2, _suffix2 = Formula.parse_prefix(_suffix1[2:])
                 return Formula('->', f1, f2), _suffix2[1:]
 
@@ -565,7 +564,7 @@ class Formula:
             quantifier = s[0]
             s = s[1:]
             var_name = ""
-            for idx,char in enumerate(s):
+            for idx, char in enumerate(s):
                 if char == '[':
                     var_name = s[:idx]
                     s = s[idx:]
@@ -720,8 +719,7 @@ class Formula:
                     set_of_functions.add(func_tuple)
 
         elif is_function(self.root):
-            for _term in self.arguments:
-                set_of_functions.add((self.root, len(self.arguments)))
+            set_of_functions.add((self.root, len(self.arguments)))
 
         elif is_quantifier(self.root):
             for var in self.predicate.functions():
