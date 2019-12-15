@@ -65,7 +65,6 @@ def replace_functions_with_relations_in_model(model: Model[T]) -> Model[T]:
                model.relation_meanings
     # Task 8.1
     # model's universe and Constant Meanings stays the same
-    new_relation_arities = {}
     new_relation_meanings = {}
 
     # adding all the current relation meaning of the model
@@ -115,6 +114,37 @@ def replace_relations_with_functions_in_model(model: Model[T],
         assert function_name_to_relation_name(function) in \
                model.relation_meanings
     # Task 8.2
+    # faulty model = function for same input return different answers
+    new_func_meanings = {}
+    new_relation = {}
+    # model_original_functions contains the name of relation that need to be converted back to function
+    model_original_functions = set()
+    for func_name in original_functions:
+        model_original_functions.add(function_name_to_relation_name(func_name))
+    for _name, _arg in model.relation_meanings.items():
+        if _name not in model_original_functions:
+            # new_relation contain relation which aren't original function
+            new_relation[_name] = model.relation_meanings[_name]
+            continue
+        func_input_and_output = {}
+        for _tuple in _arg:
+            # case where for same input, function return different solution
+            if _tuple[1:] in func_input_and_output and\
+                            func_input_and_output[_tuple[1:]] != _tuple[0]:
+                return None
+            # else
+            func_input_and_output[_tuple[1:]] = _tuple[0]
+        new_func_meanings[relation_name_to_function_name(_name)] = func_input_and_output
+    # checking that the function gets all model arg, and not partial
+    for func_name,input_and_output in new_func_meanings.items():
+        # arity - number of arguments that the function gets
+        arity = len(next(iter(input_and_output.keys())))
+        if len(input_and_output) != len(model.universe) ** arity:
+            return None
+
+    return Model(model.universe, model.constant_meanings, new_relation, new_func_meanings)
+
+
 
 def compile_term(term: Term) -> List[Formula]:
     """Syntactically compiles the given term into a list of single-function
