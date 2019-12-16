@@ -179,8 +179,6 @@ def compile_term(term: Term) -> List[Formula]:
         for arg in term.arguments:
             if is_function(arg.root):
                 _compiled_term = compile_term(arg)
-                if not _compiled_term:
-                    continue
                 for _formula in _compiled_term:
                     if _formula.arguments[0].root[0] == 'z':
                         lst_to_return.append(_formula)
