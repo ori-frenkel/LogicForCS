@@ -117,7 +117,8 @@ def replace_relations_with_functions_in_model(model: Model[T],
     # faulty model = function for same input return different answers
     new_func_meanings = {}
     new_relation = {}
-    # model_original_functions contains the name of relation that need to be converted back to function
+    # model_original_functions contains the name of relation that need to be
+    # converted back to function
     model_original_functions = set()
     for func_name in original_functions:
         model_original_functions.add(function_name_to_relation_name(func_name))
@@ -134,11 +135,14 @@ def replace_relations_with_functions_in_model(model: Model[T],
                 return None
             # else
             func_input_and_output[_tuple[1:]] = _tuple[0]
-        new_func_meanings[relation_name_to_function_name(_name)] = func_input_and_output
-    # checking that the function gets all model arg, and not partial
+        new_func_meanings[relation_name_to_function_name(_name)] =\
+                                                    func_input_and_output
+    # checking that the function gets all model arguments, and not partial,
     for func_name,input_and_output in new_func_meanings.items():
         # arity - number of arguments that the function gets
         arity = len(next(iter(input_and_output.keys())))
+        # need to be len(model.universe) ** arity number of input and output
+        # in the model
         if len(input_and_output) != len(model.universe) ** arity:
             return None
 
@@ -168,6 +172,35 @@ def compile_term(term: Term) -> List[Formula]:
     """
     assert is_function(term.root)
     # Task 8.3
+    lst_to_return = list()
+    # f(x,h(y)) --> f(x,z1) --> [z1=h(y), z2=f(x,z1)]
+    if is_function(term.root):
+        func_arg_tuple = tuple()
+        for arg in term.arguments:
+            if is_function(arg.root):
+                _compiled_term = compile_term(arg)
+                if not _compiled_term:
+                    continue
+                for _formula in _compiled_term:
+                    if _formula.arguments[0].root[0] == 'z':
+                        lst_to_return.append(_formula)
+                # last formula contain the name of the function,
+                # e.g, z1 = func(), and we need the z1
+                func_arg_tuple = func_arg_tuple +\
+                                 (_compiled_term.pop().arguments[0].root,)
+            else:
+                # if its not function, it stays as is.
+                func_arg_tuple = func_arg_tuple + (arg,)
+        func_arg_tuple = (Term(next(fresh_variable_name_generator)), ) +\
+                         (Term(term.root, func_arg_tuple), )
+        lst_to_return.append(Formula('=',func_arg_tuple))
+        return lst_to_return
+
+    # else
+    return [Formula(term.root, {})]
+
+
+
 
 def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     """Syntactically converts the given formula to a formula that does not
