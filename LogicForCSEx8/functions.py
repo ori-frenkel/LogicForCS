@@ -198,7 +198,73 @@ def compile_term(term: Term) -> List[Formula]:
     return [Formula(term.root, {})]
 
 
+def equality_handler(formula: Formula, lst)-> Formula:
+    translated_term = compile_term(formula.arguments)
+    print("A")
 
+    return Formula()
+
+
+def handle_relation(formula : Formula) -> Formula:
+    if is_relation(formula.root):
+        lst = list()
+        # combine all the arg z(i) = term into one list
+        for arg in formula.arguments:
+            if not is_function(arg.root):
+                lst.append(arg)
+                continue
+            for z in compile_term(arg):
+                lst.append(z)
+        first_z = lst[0]
+        if is_equality(first_z.root):
+            my_arg = (Term(first_z.arguments[0].root), ) + first_z.arguments[1].arguments
+        else:
+            my_arg = (first_z, )
+        form = Formula(function_name_to_relation_name(first_z.arguments[1].root), my_arg)
+        formula_to_return = Formula('A', first_z.arguments[0].root, form)
+        for z in lst[1:]:
+            if not is_equality(z.root):
+                continue
+            my_arg = (Term(z.arguments[0].root),) + z.arguments[
+                1].arguments
+            form = Formula(
+                function_name_to_relation_name(z.arguments[1].root),
+                my_arg)
+            formula_to_return = Formula('->', formula_to_return, Formula('A', z.arguments[0].root, form))
+        # after handling all the argument, adding the final result
+        my_arg = list()
+        for _f in lst:
+            if is_equality(_f.root):
+                my_arg.append(_f.arguments[0])
+            else:
+                my_arg.append(_f)
+        # my_arg = [if is_equality(_f.root) :_f.arguments[0] else: _f for _f in lst]
+        form = Formula(formula.root, my_arg)
+        formula_to_return = Formula('->', formula_to_return, form)
+        return formula_to_return
+
+def handle_relation1(formula , lst, final_relation, first = False):
+    # base case
+    if len(lst) == 1:
+        arg = (Term(lst[0].arguments[0].root),) + lst[0].arguments[1].arguments
+        form = Formula(function_name_to_relation_name(lst[0].arguments[1].root),
+                            arg)
+        return Formula('A', lst[0].arguments[0].root, Formula('->', form, final_relation))
+
+    if first:
+        arg = (Term(lst[0].arguments[0].root) , ) + lst[0].arguments[1].arguments
+        form = Formula('->', Formula(function_name_to_relation_name(lst[0].arguments[1].root),
+                                     arg),
+                       handle_relation1(formula, lst[1:], final_relation))
+
+        d = Formula('A', lst[0].arguments[0].root, form)
+        return d
+    else:
+        arg = (Term(lst[0].arguments[0].root),) + lst[0].arguments[1].arguments
+        form_left = Formula(function_name_to_relation_name(lst[0].arguments[1].root),
+                            arg)
+        return Formula('A', lst[0].arguments[0].root,
+                       Formula('->', form_left ,handle_relation1(formula, lst[1:], final_relation)))
 
 def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     """Syntactically converts the given formula to a formula that does not
@@ -223,6 +289,87 @@ def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     for variable in formula.variables():
         assert variable[0] != 'z'
     # Task 8.4
+    # s1 = Formula.parse("R(f(g(x)),h(2,y),3)")
+    # # g = Formula.parse("Az1[(G(z1,x->Az2[(F(z2,z1->Az3[(H(z3,2,y->R(z2, z3, 3))])])]")
+    g2 = Formula.parse("Ax[Ay[Az[((F(z1)->G(z2])->H(z3))]->GT(y,4))")
+
+    # lst = list()
+    # if is_relation(A1.root):
+    #     for arg in A1.arguments:
+    #         for z in compile_term(arg):
+    #             lst.append(z)
+    #     first_z = lst[0]
+    #     my_arg = (first_z.arguments[0].root, ) + first_z.arguments[1].arguments
+    #     form = Formula(function_name_to_relation_name(first_z.arguments[1].root), my_arg)
+    #     formula_to_return = Formula('A', first_z.arguments[0].root, form)
+    #     lst = lst[1:]
+    #     for z in lst:
+    #         my_arg = (Term(z.arguments[0].root),) + z.arguments[
+    #             1].arguments
+    #         form = Formula(function_name_to_relation_name(z.arguments[1].root),
+    #                        my_arg)
+    #         formula_to_return = Formula('->', formula_to_return, Formula('A', z.arguments[0].root, form))
+    #     my_arg = [_f.arguments[0] for _f in lst]
+    #     form = Formula(A1.root, my_arg)
+    #     formula_to_return = Formula('->', formula_to_return,form)
+    #     h = formula_to_return
+    # return None
+
+    # # for arg in lst:
+    # A1 = Formula.parse("R(f(c),g(h(a),b))")
+    # A2 = compile_term(Term.parse("f(c)"))
+    # A3 = compile_term(Term.parse("g(h(a),b))"))
+    # A5 = Formula.parse("Az1[(F(z1,c)->Az2[(H(z2,a)->Az3[G(z3,z2,b])])]")
+
+
+    a = next(fresh_variable_name_generator)
+
+    # formula = Formula.parse("R(f(g(x)),h(2,y),3)")
+    lst_of_z = list()
+    final_relation_arguments = list()
+    for arg in formula.arguments:
+        if is_function(arg.root):
+            # final_relation_arguments.append(compile_term(arg)[-1].arguments[0])
+            for _term in compile_term(arg):
+                lst_of_z.append(_term)
+            final_relation_arguments.append(lst_of_z[-1].arguments[0])
+        else:
+            final_relation_arguments.append(arg)
+    final_arg = list()
+    # creating the final result
+    for arg in final_relation_arguments:
+        if is_equality(arg.root):
+            final_arg.append(arg.arguments[0])
+        else:
+            final_arg.append(arg)
+    final_relation = Formula(formula.root, final_arg)
+
+
+    if is_relation(formula.root):
+        h =  handle_relation1(formula, lst_of_z, final_relation, True)
+        return h
+
+    if is_relation(formula.root):
+        return handle_relation(formula)
+    if is_equality(formula.root):
+        lst_of_z = list()
+        for arg in formula.arguments:
+            if is_function(arg.root):
+                for j in compile_term(arg):
+                    lst_of_z.append(j)
+            else:
+                lst_of_z.append(arg)
+        return equality_handler(formula, [])
+    elif is_relation(formula.root):
+        return handle_relation(formula)
+    elif is_unary(formula.root):
+        return Formula('~',replace_functions_with_relations_in_formula(formula.first))
+    elif is_binary(formula.root):
+        return Formula(formula.root,
+                       replace_functions_with_relations_in_formula(formula.first),
+                       replace_functions_with_relations_in_formula(formula.second))
+    return None
+
 
 def replace_functions_with_relations_in_formulas(formulas:
                                                  AbstractSet[Formula]) -> \
