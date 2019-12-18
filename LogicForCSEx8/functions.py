@@ -203,39 +203,40 @@ Helper for 8.4,
 relation and equality are the same, except for the final_conclusion
 (which is almost the same)
 """
-def handle_relation_and_equality(formula , lst, final_conclusion, first = False):
+def handle_relation_and_equality(formula , lst_of_z, final_conclusion, first = False):
     # base case
-    if len(lst) == 1:
+    if len(lst_of_z) == 1:
 
-        arg = (lst[0].arguments[0],) + lst[0].arguments[1].arguments
+        arg = (lst_of_z[0].arguments[0],) + lst_of_z[0].arguments[1].arguments
         # for _t in arg:
         #     assert type(_t) == Term
-        form = Formula(function_name_to_relation_name(lst[0].arguments[1].root),
+        form = Formula(function_name_to_relation_name(lst_of_z[0].arguments[1].root),
                             arg)
-        return Formula('A', lst[0].arguments[0].root, Formula('->', form, final_conclusion))
+        return Formula('A', lst_of_z[0].arguments[0].root, Formula('->', form,final_conclusion))
 
     if first:
-        if len(lst) == 0:
+        if len(lst_of_z) == 0:
             return formula
 
-        arg = (lst[0].arguments[0] , ) + lst[0].arguments[1].arguments
+        arg = (lst_of_z[0].arguments[0] , ) + lst_of_z[0].arguments[1].arguments
         # for _t in arg:
         #     assert type(_t) == Term
-        form = Formula('->', Formula(function_name_to_relation_name(lst[0].arguments[1].root),
+        form = Formula('->', Formula(function_name_to_relation_name(lst_of_z[0].arguments[1].root),
                                      arg),
-                       handle_relation_and_equality(formula, lst[1:], final_conclusion))
+                       handle_relation_and_equality(formula, lst_of_z[1:], final_conclusion))
 
-        d = Formula('A', lst[0].arguments[0].root, form)
+        d = Formula('A', lst_of_z[0].arguments[0].root, form)
         return d
     else:
 
-        arg = ((lst[0].arguments[0]),) + lst[0].arguments[1].arguments
+        arg = ((lst_of_z[0].arguments[0]),) + lst_of_z[0].arguments[1].arguments
         # for _t in arg:
         #     assert type(_t) == Term
-        form_left = Formula(function_name_to_relation_name(lst[0].arguments[1].root),
+        form_left = Formula(function_name_to_relation_name(lst_of_z[0].arguments[1].root),
                             arg)
-        return Formula('A', lst[0].arguments[0].root,
-                       Formula('->', form_left ,handle_relation_and_equality(formula, lst[1:], final_conclusion)))
+        return Formula('A', lst_of_z[0].arguments[0].root,
+                       Formula('->', form_left ,
+                               handle_relation_and_equality(formula, lst_of_z[1:], final_conclusion)))
 
 def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     """Syntactically converts the given formula to a formula that does not
