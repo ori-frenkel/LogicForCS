@@ -185,7 +185,7 @@ def compile_term(term: Term) -> List[Formula]:
                 # last formula contain the name of the function,
                 # e.g, z1 = func(), and we need the z1
                 func_arg_tuple = func_arg_tuple +\
-                                 (_compiled_term.pop().arguments[0].root,)
+                                 (Term(_compiled_term.pop().arguments[0].root),)
             else:
                 # if its not function, it stays as is.
                 func_arg_tuple = func_arg_tuple + (arg,)
@@ -198,22 +198,25 @@ def compile_term(term: Term) -> List[Formula]:
     return [Formula(term.root, {})]
 
 
-def equality_handler(formula: Formula, lst)-> Formula:
-    translated_term = compile_term(formula.arguments)
-    print("A")
-    return None
-
-
+"""
+Helper for 8.4,
+relation and equality are the same, except for the final_conclusion
+(which is almost the same)
+"""
 def handle_relation_and_equality(formula , lst, final_conclusion, first = False):
     # base case
     if len(lst) == 1:
-        arg = (Term(lst[0].arguments[0].root),) + lst[0].arguments[1].arguments
+        arg = (lst[0].arguments[0],) + lst[0].arguments[1].arguments
+        for _t in arg:
+            assert type(_t) == Term
         form = Formula(function_name_to_relation_name(lst[0].arguments[1].root),
                             arg)
         return Formula('A', lst[0].arguments[0].root, Formula('->', form, final_conclusion))
 
     if first:
-        arg = (Term(lst[0].arguments[0].root) , ) + lst[0].arguments[1].arguments
+        arg = (lst[0].arguments[0] , ) + lst[0].arguments[1].arguments
+        for _t in arg:
+            assert type(_t) == Term
         form = Formula('->', Formula(function_name_to_relation_name(lst[0].arguments[1].root),
                                      arg),
                        handle_relation_and_equality(formula, lst[1:], final_conclusion))
@@ -221,11 +224,13 @@ def handle_relation_and_equality(formula , lst, final_conclusion, first = False)
         d = Formula('A', lst[0].arguments[0].root, form)
         return d
     else:
-        arg = (Term(lst[0].arguments[0].root),) + lst[0].arguments[1].arguments
+        arg = ((lst[0].arguments[0]),) + lst[0].arguments[1].arguments
+        for _t in arg:
+            assert type(_t) == Term
         form_left = Formula(function_name_to_relation_name(lst[0].arguments[1].root),
                             arg)
         return Formula('A', lst[0].arguments[0].root,
-                       Formula('->', form_left ,final_conclusion(formula, lst[1:], final_conclusion)))
+                       Formula('->', form_left ,handle_relation_and_equality(formula, lst[1:], final_conclusion)))
 
 def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     """Syntactically converts the given formula to a formula that does not
@@ -261,36 +266,33 @@ def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     # A5 = Formula.parse("Az1[(F(z1,c)->Az2[(H(z2,a)->Az3[G(z3,z2,b])])]")
 
 
-    # a = next(fresh_variable_name_generator)
+    if is_relation(formula.root) or is_equality(formula.root):
+        lst_of_z = list()  # all the z(i) = something
+        final_relation_arguments = list()
+        for arg in formula.arguments:
+            if is_function(arg.root):
+                # final_relation_arguments.append(compile_term(arg)[-1].arguments[0]) same as two line forward
+                for _term in compile_term(arg):
+                    lst_of_z.append(_term)
+                final_relation_arguments.append(lst_of_z[-1].arguments[0])
+            else:
+                final_relation_arguments.append(arg)
+        final_arg = list()
+        # creating the final result (the last '->')
+        for arg in final_relation_arguments:
+            if is_equality(arg.root):
+                final_arg.append(arg.arguments[0])
+            else:
+                final_arg.append(arg)
 
-    # formula = Formula.parse("R(f(g(x)),h(2,y),3)")
-    lst_of_z = list() # all the z(i) = something
-    final_relation_arguments = list()
-    for arg in formula.arguments:
-        if is_function(arg.root):
-            # final_relation_arguments.append(compile_term(arg)[-1].arguments[0])
-            for _term in compile_term(arg):
-                lst_of_z.append(_term)
-            final_relation_arguments.append(lst_of_z[-1].arguments[0])
+        if is_relation(formula.root):
+            final_relation = Formula(formula.root, final_arg)
+            return handle_relation_and_equality(formula, lst_of_z, final_relation, True)
+
         else:
-            final_relation_arguments.append(arg)
-    final_arg = list()
-    # creating the final result (the last '->')
-    for arg in final_relation_arguments:
-        if is_equality(arg.root):
-            final_arg.append(arg.arguments[0])
-        else:
-            final_arg.append(arg)
-
-
-
-    if is_relation(formula.root):
-        final_relation = Formula(formula.root, final_arg)
-        return handle_relation_and_equality(formula, lst_of_z, final_relation, True)
-
-    elif is_equality(formula.root):
-        final_equality = Formula(formula.root, final_arg)
-        return handle_relation_and_equality(formula, lst_of_z, final_equality, True)
+            assert is_equality(formula.root)
+            final_equality = Formula(formula.root, final_arg)
+            return handle_relation_and_equality(formula, lst_of_z, final_equality, True)
 
     elif is_unary(formula.root):
         return Formula('~',replace_functions_with_relations_in_formula(formula.first))
@@ -300,8 +302,9 @@ def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
                        replace_functions_with_relations_in_formula(formula.first),
                        replace_functions_with_relations_in_formula(formula.second))
     else:
-        assert (is_quantifier(formula.root))
-
+        assert is_quantifier(formula.root)
+        h = Formula(formula.root, formula.variable, replace_functions_with_relations_in_formula(formula.predicate))
+        return h
 
 
 def replace_functions_with_relations_in_formulas(formulas:
