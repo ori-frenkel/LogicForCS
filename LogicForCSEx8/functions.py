@@ -225,8 +225,7 @@ def handle_relation_and_equality(formula , lst_of_z, final_conclusion, first = F
                                      arg),
                        handle_relation_and_equality(formula, lst_of_z[1:], final_conclusion))
 
-        d = Formula('A', lst_of_z[0].arguments[0].root, form)
-        return d
+        return Formula('A', lst_of_z[0].arguments[0].root, form)
     else:
 
         arg = ((lst_of_z[0].arguments[0]),) + lst_of_z[0].arguments[1].arguments
@@ -261,16 +260,6 @@ def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
     for variable in formula.variables():
         assert variable[0] != 'z'
     # Task 8.4
-    # s1 = Formula.parse("R(f(g(x)),h(2,y),3)")
-    # # g = Formula.parse("Az1[(G(z1,x->Az2[(F(z2,z1->Az3[(H(z3,2,y->R(z2, z3, 3))])])]")
-    g2 = Formula.parse("Ax[Ay[Az[((F(z1)->G(z2])->H(z3))]->GT(y,4))")
-
-    # # for arg in lst:
-    # A1 = Formula.parse("R(f(c),g(h(a),b))")
-    # A2 = compile_term(Term.parse("f(c)"))
-    # A3 = compile_term(Term.parse("g(h(a),b))"))
-    # A5 = Formula.parse("Az1[(F(z1,c)->Az2[(H(z2,a)->Az3[G(z3,z2,b])])]")
-
 
     if is_relation(formula.root) or is_equality(formula.root):
         lst_of_z = list()  # all the z(i) = something
@@ -309,8 +298,8 @@ def replace_functions_with_relations_in_formula(formula: Formula) -> Formula:
                        replace_functions_with_relations_in_formula(formula.second))
     else:
         assert is_quantifier(formula.root)
-        h = Formula(formula.root, formula.variable, replace_functions_with_relations_in_formula(formula.predicate))
-        return h
+        return Formula(formula.root, formula.variable,
+                    replace_functions_with_relations_in_formula(formula.predicate))
 
 
 def replace_functions_with_relations_in_formulas(formulas:
