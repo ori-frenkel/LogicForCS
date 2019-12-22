@@ -89,6 +89,7 @@ def replace_functions_with_relations_in_model(model: Model[T]) -> Model[T]:
         new_relation_meanings[function_name_to_relation_name(func)] = new_meaning
     return Model(model.universe, model.constant_meanings, new_relation_meanings,{})
 
+
 def replace_relations_with_functions_in_model(model: Model[T],
                                               original_functions:
                                               AbstractSet[str]) -> \
@@ -124,7 +125,7 @@ def replace_relations_with_functions_in_model(model: Model[T],
         model_original_functions.add(function_name_to_relation_name(func_name))
     for _name, _arg in model.relation_meanings.items():
         if _name not in model_original_functions:
-            # new_relation contain relation which aren't original function
+            # new_relation contains relations which aren't originally functions
             new_relation[_name] = model.relation_meanings[_name]
             continue
         func_input_and_output = {}
@@ -174,28 +175,24 @@ def compile_term(term: Term) -> List[Formula]:
     # Task 8.3
     lst_to_return = list()
     # f(x,h(y)) --> f(x,z1) --> [z1=h(y), z2=f(x,z1)]
-    if is_function(term.root):
-        func_arg_tuple = tuple()
-        for arg in term.arguments:
-            if is_function(arg.root):
-                _compiled_term = compile_term(arg)
-                for _formula in _compiled_term:
-                    if _formula.arguments[0].root[0] == 'z':
-                        lst_to_return.append(_formula)
-                # last formula contain the name of the function,
-                # e.g, z1 = func(), and we need the z1
-                func_arg_tuple = func_arg_tuple +\
-                                 (Term(_compiled_term.pop().arguments[0].root),)
-            else:
-                # if its not function, it stays as is.
-                func_arg_tuple = func_arg_tuple + (arg,)
-        func_arg_tuple = (Term(next(fresh_variable_name_generator)), ) +\
-                         (Term(term.root, func_arg_tuple), )
-        lst_to_return.append(Formula('=',func_arg_tuple))
-        return lst_to_return
-
-    # else
-    return [Formula(term.root, {})]
+    func_arg_tuple = tuple()
+    for arg in term.arguments:
+        if is_function(arg.root):
+            _compiled_term = compile_term(arg)
+            for _formula in _compiled_term:
+                if _formula.arguments[0].root[0] == 'z':
+                    lst_to_return.append(_formula)
+            # last formula contain the name of the function,
+            # e.g, z1 = func(), and we need the z1
+            func_arg_tuple = func_arg_tuple +\
+                             (Term(_compiled_term.pop().arguments[0].root),)
+        else:
+            # if its not function, it stays as is.
+            func_arg_tuple = func_arg_tuple + (arg,)
+    func_arg_tuple = (Term(next(fresh_variable_name_generator)), ) +\
+                     (Term(term.root, func_arg_tuple), )
+    lst_to_return.append(Formula('=', func_arg_tuple))
+    return lst_to_return
 
 
 """
@@ -344,7 +341,73 @@ def replace_functions_with_relations_in_formulas(formulas:
         for variable in formula.variables():
             assert variable[0] != 'z'
     # Task 8.5
-        
+    new_formulas = set()
+    for formula in formulas:
+        if not is_relation(formula.root):
+            new_formulas.add(formula)
+        else:
+            new_formula = replace_functions_with_relations_in_formula(formula)
+            new_formulas.add(new_formula)
+            v1 = "z1"
+            v2 = "z2"
+            t1 = Term(v1)
+            t2 = Term(v2)
+            temp = new_formula
+            while is_quantifier(temp.root):
+                i = 3
+                # zi will be a name of the function's variable
+                temp = temp.predicate
+                arguments = temp.first.arguments
+                new_arguments = list()
+                new_arguments.append(arguments[0])
+                for j in range(len(arguments[1:])):
+                    new_arguments.append(Term("z"+str(i)))
+                    i += 1
+                relation = Formula(temp.first.root, tuple(new_arguments))
+                r1 = Formula(relation.root, (t1,) + relation.arguments[1:])
+                r2 = Formula(relation.root, (t2,) + relation.arguments[1:])
+                f1 = Formula('E', arguments[0].root, relation)
+                f2_second = Formula('=', (t1, t2))
+                f2_first = Formula('&', r1, r2)
+                f2 = Formula('->', f2_first, f2_second)
+                f2 = Formula('A', v2, f2)
+                f2 = Formula('A', v1, f2)
+                # f1 and f2 are ready to be added each variable before them
+
+                for arg in relation.arguments[1:]:
+                    f1 = Formula('A', arg.root, f1)
+                    f2 = Formula('A', arg.root, f2)
+
+                new_formulas.add(f1)
+                new_formulas.add(f2)
+                temp = temp.second
+
+    return new_formulas
+
+
+
+def replace_equality_with_SAME_in_formula(formula:Formula) -> Formula:
+    """
+    Replaces a single formula's equalities with SAME relation
+    :param formula: Formula
+    :return: the formula with all equalities changed to SAME relations
+    """
+    if is_equality(formula.root):
+        return Formula("SAME", formula.arguments)
+    if is_quantifier(formula.root):
+        return Formula(formula.root, formula.variable, replace_equality_with_SAME_in_formula(
+            formula.predicate))
+    if is_binary(formula.root):
+        return Formula(formula.root, replace_equality_with_SAME_in_formula(
+            formula.first), replace_equality_with_SAME_in_formula(
+            formula.second))
+    if is_unary(formula.root):
+        return Formula(formula.root, replace_equality_with_SAME_in_formula(
+            formula.first))
+    else:  # relation
+        return formula
+
+
 def replace_equality_with_SAME_in_formulas(formulas: AbstractSet[Formula]) -> \
         Set[Formula]:
     """Syntactically converts the given set of formulas to a canonically
@@ -372,7 +435,52 @@ def replace_equality_with_SAME_in_formulas(formulas: AbstractSet[Formula]) -> \
         assert 'SAME' not in \
                {relation for relation,arity in formula.relations()}
     # Task 8.6
-        
+    relations = set()
+    new_formulas = set()
+    for formula in formulas:
+        new_formulas.add(replace_equality_with_SAME_in_formula(formula))
+        relations = formula.relations()
+
+    SAME_XY = Formula('->', Formula('SAME', (Term('x'),Term('y'))),
+                      Formula('SAME', (Term('y'),Term('x'))))
+    SAME_XYZ = Formula('->', Formula('&', Formula('SAME', (Term('x'), Term('y'))),
+                                     Formula('SAME', (Term('y'), Term('z')))),
+                       Formula('SAME', (Term('x'), Term('z'))))
+    SAME_XX = Formula('SAME', (Term('x'), Term('x')))
+    # reflexivity
+    new_formulas.add(Formula('A', "x", SAME_XX))
+    # symmetry
+    new_formulas.add(Formula('A', "y", Formula('A', "x", SAME_XY)))
+    # transitivity
+    new_formulas.add(Formula('A', "z", Formula('A', "y", Formula('A', "x",
+                                                           SAME_XYZ))))
+    relations = list(relations)
+    for relation in relations:
+        args1 = list(); args2 = list()
+        same = None
+        for i in range(relation[1]):
+            xi = Term("x"+str(i+1))
+            yi = Term("y"+str(i+1))
+            args1.append(xi)
+            args2.append(yi)
+            same_xi_yi = Formula('SAME', (xi, yi))
+            if same is not None:
+                same = Formula('&', same, same_xi_yi)
+            else:
+                same = same_xi_yi
+        relation_formula = Formula('->', Formula(relation[0], args1),
+                                   Formula(relation[0], args2))
+        # same (x1,...,xn), (y1,...,yn) -> relation(x1,...,xn) -> relation(y1,...,yn)
+        relation_formula = Formula('->', same, relation_formula)
+        # add quantifiers
+        for i in range(relation[1]):
+            relation_formula = Formula('A', "x"+str(i+1), relation_formula)
+        for i in range(relation[1]):
+            relation_formula = Formula('A', "y"+str(i+1), relation_formula)
+        new_formulas.add(relation_formula)
+    return new_formulas
+
+
 def add_SAME_as_equality_in_model(model: Model[T]) -> Model[T]:
     """Adds a meaning for the relation name ``'SAME'`` in the given model, that
     canonically corresponds to equality in the given model.
@@ -389,7 +497,16 @@ def add_SAME_as_equality_in_model(model: Model[T]) -> Model[T]:
     """
     assert 'SAME' not in model.relation_meanings
     # Task 8.7
-    
+    relation_meanings = dict(model.relation_meanings)
+    same_set = set()
+    # add tuples of the same elements in the universe
+    for element in model.universe:
+        same_set.add((element, element))
+    relation_meanings['SAME'] = same_set
+
+    return Model(model.universe, model.constant_meanings, relation_meanings,
+                 model.function_meanings)
+
 def make_equality_as_SAME_in_model(model: Model[T]) -> Model[T]:
     """Converts the given model to a model where equality coincides with the
     meaning of ``'SAME'`` in the given model, in the sense that any set of
@@ -414,3 +531,62 @@ def make_equality_as_SAME_in_model(model: Model[T]) -> Model[T]:
            model.relation_arities['SAME'] == 2
     assert len(model.function_meanings) == 0
     # Task 8.8
+    seen = dict()
+    # seen[element] = element in the equal_dict that is the same
+    equal_dict = dict()
+    # equal_dict keeps keys and the elements that share their same value
+    for equality in model.relation_meanings['SAME']:
+        if equality[0] != equality[1]:
+            # not x=x
+            if equality[0] not in seen.keys():
+                if equality[1] not in seen.keys():
+                    # both elements of equality weren't seen yet
+                    equal_dict[equality[0]] = set()
+                    equal_dict[equality[0]].add(equality[0])
+                    equal_dict[equality[0]].add(equality[1])
+                    seen[equality[0]] = equality[0]
+                    seen[equality[1]] = equality[0]
+                else:
+                    # equality[1] in seen keys
+                    equal_dict[seen[equality[1]]].add(equality[0])
+                    seen[equality[0]] = seen[equality[1]]
+            else:
+                # equality[0] in seen keys
+                if equality[1] not in seen.keys():
+                    # equality[1] not in seen keys
+                    equal_dict[seen[equality[0]]].add(equality[1])
+                    seen[equality[1]] = seen[equality[0]]
+                else:
+                    # equality[0] and equality[1] in seen keys
+                    if seen[equality[0]] == seen[equality[1]]:
+                        continue
+                    else:
+                        set2 = equal_dict.pop(seen[equality[1]])
+                        equal_dict[seen[equality[0]]].update(set2)
+                        seen[equality[1]] = equality[0]
+        else:
+            if equality[0] not in seen.keys():
+                equal_dict[equality[0]] = set()
+                equal_dict[equality[0]].add(equality[0])
+                seen[equality[0]] = equality[0]
+
+    constant_meanings = dict(model.constant_meanings)
+    for constant in constant_meanings.keys():
+        # change each constant's value to identifier's value
+        constant_meanings[constant] = seen[constant_meanings[constant]]
+
+    relation_meanings = dict()
+    for relation in model.relation_meanings.keys():
+        if relation != 'SAME':
+            new_tuples = set()
+            relation_set = set(model.relation_meanings[relation])
+            while len(relation_set):
+                current_tuple = relation_set.pop()
+                new_tuple = list()
+                # change each tuple, every element will belong to identifiers
+                for element in current_tuple:
+                    new_tuple.append(seen[element])
+                new_tuples.add(tuple(new_tuple))
+            relation_meanings[relation] = new_tuples
+
+    return Model(equal_dict.keys(), constant_meanings, relation_meanings)
