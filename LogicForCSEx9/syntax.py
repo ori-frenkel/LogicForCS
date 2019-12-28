@@ -412,6 +412,20 @@ def is_quantifier(s: str) -> bool:
     """
     return s == 'A' or s == 'E'
 
+"""
+Used this function for task 9.2,
+This function getting a dict, and unwanted element, 
+and return the copy of the dict without this element, or the dict it self 
+if it already does not contain that element
+"""
+def copy_dict_without_one_element(_dict, element_to_remove):
+    # if the element already not in the dict, than return the dict as is.
+    if not element_to_remove in _dict:
+        return _dict
+    new_dict = dict(_dict) # shallow copy
+    del new_dict[element_to_remove]
+    return new_dict
+
 @frozen
 class Formula:
     """An immutable first-order formula in tree representation, composed from
@@ -857,6 +871,36 @@ class Formula:
         for variable in forbidden_variables:
             assert is_variable(variable)
         # Task 9.2
+        if is_relation(self.root) or is_equality(self.root):
+            new_arg = list()
+            for arg in self.arguments:
+                new_arg.append(arg.substitute(substitution_map,
+                                              forbidden_variables))
+            return Formula(self.root, new_arg)
+
+        elif is_binary(self.root):
+            # recursively call first and second (first , binary_operator, second)
+            return Formula(self.root,
+                           self.first.substitute(substitution_map,
+                                                 forbidden_variables),
+                           self.second.substitute(substitution_map,
+                                                 forbidden_variables))
+        else:
+            # must be quantifier (for example Ax(x=plus(x,0)))
+            assert is_quantifier(self.root)
+            # creating new_forbidden_var in order to raise an error when :
+            #  'variable occurrence that becomes bound when that term is
+            #    substituted into the current formula'
+            # just adding self.variable to forbidden variable
+            new_forbidden_var = list()
+            for _forbidden_var in forbidden_variables:
+                new_forbidden_var.append(_forbidden_var)
+            new_forbidden_var.append(self.variable)
+
+            new_predicate = self.predicate.substitute(
+                copy_dict_without_one_element(substitution_map, self.variable),
+                                              new_forbidden_var)
+            return Formula(self.root, self.variable, new_predicate)
 
     def propositional_skeleton(self) -> Tuple[PropositionalFormula,
                                               Mapping[str, Formula]]:
