@@ -116,7 +116,7 @@ class Schema:
                     that is disallowed during a schema instantiation.
                 relation_name: the relation name during whose substitution the
                     relevant occurrence of the variable name is to become bound.
-            """            
+            """
             assert is_variable(variable_name)
             assert is_relation(relation_name)
             self.variable_name = variable_name
@@ -127,7 +127,8 @@ class Schema:
                             constants_and_variables_instantiation_map:
                             Mapping[str, Term],
                             relations_instantiation_map: Mapping[str, Formula],
-                            bound_variables: AbstractSet[str] = frozenset()) \
+                            bound_variables: AbstractSet[str] = frozenset(),
+                            quantifier_bounded = None) \
             -> Formula:
         """Performs the following substitutions in the given formula:
 
@@ -244,22 +245,30 @@ class Schema:
             return formula.substitute(constants_and_variables_instantiation_map,
                                       bound_variables)
         elif is_relation(formula.root):
-            if formula.root not in relations_instantiation_map:
-                return formula.substitute(constants_and_variables_instantiation_map,
-                                      bound_variables)
-            # case of R()
-            elif len(formula.arguments) == 0:
-                return relations_instantiation_map[formula.root]
-            # case where formula is unary invocation of a (parametrized)
-            # template relation that is in the form R(t)
-            # where R is a template relation name and t is a term
-            # todo, need to throw in some case exception here
-            elif len(formula.arguments) == 1:
-                instantiated_argument = formula.arguments[0].substitute(
-                    constants_and_variables_instantiation_map, bound_variables)
-                return relations_instantiation_map[formula.root].substitute(
-                       {'_' : instantiated_argument})
+            try:
+                if formula.root not in relations_instantiation_map:
+                    return formula.substitute(constants_and_variables_instantiation_map,
+                                        bound_variables)
 
+                # case of R()
+                elif len(formula.arguments) == 0:
+                    return relations_instantiation_map[formula.root]
+                # case where formula is unary invocation of a (parametrized)
+                # template relation that is in the form R(t)
+                # where R is a template relation name and t is a term
+                # todo, need to throw in some case exception here
+                elif len(formula.arguments) == 1:
+
+                    instantiated_argument = formula.arguments[0].substitute(
+                        constants_and_variables_instantiation_map, bound_variables)
+                    to_return =  relations_instantiation_map[formula.root].substitute(
+                           {'_' : instantiated_argument}, bound_variables)
+
+
+                    return to_return
+                # todo: note, added above the 'quantifier_bounded'
+            except ForbiddenVariableError as e:
+                raise Schema.BoundVariableError(str(e), formula.root)
         # if it unary, than is the same answer
         # as ~ + _instantiate_helper(with formula.first)
         elif is_unary(formula.root):
@@ -290,12 +299,12 @@ class Schema:
                 new_bound_variables.add(formula_var)
             else:
                 new_bound_variables.add(formula_var)
-
+            quantifier_bounded = formula_var
             return Formula(formula.root, formula_var,
                            Schema._instantiate_helper(formula.predicate,
                                                       constants_and_variables_instantiation_map,
                                                       relations_instantiation_map,
-                                                      new_bound_variables))
+                                                      bound_variables, quantifier_bounded))
 
     def instantiate(self, instantiation_map: InstantiationMap) -> \
             Union[Formula, None]:
@@ -303,7 +312,7 @@ class Schema:
         templates of the current schema to expressions.
 
         Parameters:
-        
+
             instantiation_map: map from templates of the current schema to
                 expressions of the type for which they serve as placeholders.
                 That is, constant names are mapped to terms, variable names are
@@ -348,7 +357,7 @@ class Schema:
                argument of that invocation becomes bound by a quantification in
                the formula that is substituted for the invocation of the
                template relation name.
-            
+
         Examples:
             >>> s = Schema(Formula.parse('(Q(c1,c2)->(R(c1)->R(c2)))'),
             ...            {'c1', 'c2', 'R'})
@@ -365,12 +374,12 @@ class Schema:
             (plus(a,b)=c->plus(a,b)=c)
 
             For the following schema:
-            
+
             >>> s = Schema(Formula.parse('(Q(d)->Ax[(R(x)->Q(f(c)))])'),
             ...            {'R', 'Q', 'x', 'c'})
 
             the following succeeds:
-            
+
             >>> s.instantiate({'R': Formula.parse('_=0'),
             ...                'Q': Formula.parse('x=_'),
             ...                'x': 'w'})
@@ -387,7 +396,7 @@ class Schema:
             and the following returns ``None`` because ``'z'`` that is free in
             the assignment to ``'Q'`` is to become bound by a quantification in
             the instantiated schema formula:
-            
+
             >>> s.instantiate({'R': Formula.parse('_=0'),
             ...                'Q': Formula.parse('s(z)=_'),
             ...                'x': 'z'})
@@ -428,7 +437,7 @@ class Proof:
     assumptions: FrozenSet[Schema]
     conclusion: Formula
     lines: Tuple[Proof.Line, ...]
-    
+
     def __init__(self, assumptions: AbstractSet[Schema], conclusion: Formula,
                  lines: Sequence[Proof.Line]) -> None:
         """Initializes a `Proof` from its assumptions/axioms, conclusion,
@@ -459,7 +468,7 @@ class Proof:
         formula: Formula
         assumption: Schema
         instantiation_map: InstantiationMap
-    
+
         def __init__(self, formula: Formula, assumption: Schema,
                      instantiation_map: InstantiationMap) -> None:
             """Initializes an `~Proof.AssumptionLine` from its formula, its
@@ -513,7 +522,7 @@ class Proof:
             """
             assert line_number < len(lines) and lines[line_number] is self
             # Task 9.5
-    
+
     @frozen
     class MPLine:
         """An immutable proof line justified by the Modus Ponens (MP) inference
@@ -680,7 +689,7 @@ class Proof:
 
     #: An immutable proof line.
     Line = Union[AssumptionLine, MPLine, UGLine, TautologyLine]
-                 
+
     def __repr__(self) -> str:
         """Computes a string representation of the current proof.
 
@@ -695,7 +704,7 @@ class Proof:
             r += ('%3d) ' % i) + str(self.lines[i]) + '\n'
         r += 'QED\n'
         return r
-        
+
     def is_valid(self) -> bool:
         """Checks if the current proof is a valid proof of its claimed
         conclusion from (instances of) its assumptions/axioms.

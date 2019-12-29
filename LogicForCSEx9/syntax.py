@@ -828,7 +828,7 @@ class Formula:
 
 
     def substitute(self, substitution_map: Mapping[str, Term],
-                   forbidden_variables: AbstractSet[str] = frozenset()) -> \
+                   forbidden_variables: AbstractSet[str] = frozenset(), var_of_quantifer = None) -> \
                 Formula:
         """Substitutes in the current formula, each constant name `name` or free
         occurrence of variable name `name` that is a key in `substitution_map`
@@ -874,17 +874,37 @@ class Formula:
         if is_relation(self.root) or is_equality(self.root):
             new_arg = list()
             for arg in self.arguments:
+                if arg.root in forbidden_variables:
+                    raise ForbiddenVariableError(arg.root)
+                if var_of_quantifer is not None:
+                    new_forbidden_var = set()
+                    for var in forbidden_variables:
+                        new_forbidden_var.add(var)
+                    new_forbidden_var.add(var_of_quantifer)
+                else:
+                    new_forbidden_var = forbidden_variables
+
                 new_arg.append(arg.substitute(substitution_map,
-                                              forbidden_variables))
+                                              new_forbidden_var))
             return Formula(self.root, new_arg)
 
         elif is_binary(self.root):
-            # recursively call first and second (first , binary_operator, second)
-            return Formula(self.root,
-                           self.first.substitute(substitution_map,
-                                                 forbidden_variables),
-                           self.second.substitute(substitution_map,
-                                                 forbidden_variables))
+            # add for forbidden var the Ax 0
+            if var_of_quantifer is not None:
+                # recursively call first and second (first , binary_operator, second)
+                return Formula(self.root,
+                               self.first.substitute(substitution_map,
+                                                     forbidden_variables, var_of_quantifer),
+                               self.second.substitute(substitution_map,
+                                                     forbidden_variables, var_of_quantifer))
+            else:
+                # recursively call first and second (first , binary_operator, second)
+                return Formula(self.root,
+                               self.first.substitute(substitution_map,
+                                                     forbidden_variables),
+                               self.second.substitute(substitution_map,
+                                                     forbidden_variables))
+
         else:
             # must be quantifier (for example Ax(x=plus(x,0)))
             assert is_quantifier(self.root)
@@ -895,11 +915,11 @@ class Formula:
             new_forbidden_var = list()
             for _forbidden_var in forbidden_variables:
                 new_forbidden_var.append(_forbidden_var)
-            new_forbidden_var.append(self.variable)
+            # new_forbidden_var.append(self.variable)
 
             new_predicate = self.predicate.substitute(
                 copy_dict_without_one_element(substitution_map, self.variable),
-                                              new_forbidden_var)
+                                              new_forbidden_var, self.variable)
             return Formula(self.root, self.variable, new_predicate)
 
     def propositional_skeleton(self) -> Tuple[PropositionalFormula,
