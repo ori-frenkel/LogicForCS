@@ -79,6 +79,9 @@ def check_if_term_contain_illegal_var(_term : Term,
                                       = frozenset()):
 
     # if its function, check all the arguments of the function
+    if type(_term) == str:
+        print("Got : ", _term)
+        print("")
     if is_function(_term.root):
         for _arg in _term.arguments:
             check_if_term_contain_illegal_var(_arg, forbidden_variables)
@@ -325,7 +328,7 @@ class Term:
         # Task 9.1
         new_arg_lst = list()
         if is_function(self.root):
-            for arg in self.arguments:
+            for idx,arg in enumerate(self.arguments):
                 if is_function(arg.root):
                     new_arg_lst.append(arg.substitute(substitution_map,
                                                       forbidden_variables))
@@ -335,13 +338,16 @@ class Term:
                         substitute_term = substitution_map[arg.root]
                         # if the substituted term contain forbidden var,
                         # the the below function will raise exception
+                        if type(substitution_map) == str:
+                            print("Got : ", substitution_map)
+                            print("")
                         check_if_term_contain_illegal_var(substitute_term
                                                           ,forbidden_variables)
                         # else, its legal term
                         new_arg_lst.append(substitute_term)
                     # if no need to substitute this variable or constant
                     else:
-                        new_arg_lst.append(arg.root)
+                        new_arg_lst.append(self.arguments[idx])
         else:
             if self.root in substitution_map:
                 substitute_term = substitution_map[self.root]
