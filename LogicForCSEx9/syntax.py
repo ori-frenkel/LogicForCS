@@ -79,9 +79,6 @@ def check_if_term_contain_illegal_var(_term : Term,
                                       = frozenset()):
 
     # if its function, check all the arguments of the function
-    if type(_term) == str:
-        print("Got : ", _term)
-        print("")
     if is_function(_term.root):
         for _arg in _term.arguments:
             check_if_term_contain_illegal_var(_arg, forbidden_variables)
@@ -338,9 +335,6 @@ class Term:
                         substitute_term = substitution_map[arg.root]
                         # if the substituted term contain forbidden var,
                         # the the below function will raise exception
-                        if type(substitution_map) == str:
-                            print("Got : ", substitution_map)
-                            print("")
                         check_if_term_contain_illegal_var(substitute_term
                                                           ,forbidden_variables)
                         # else, its legal term
