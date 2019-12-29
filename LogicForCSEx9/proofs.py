@@ -242,7 +242,7 @@ class Schema:
         # already dealt with the case in task 9.2
         if is_equality(formula.root):
             return formula.substitute(constants_and_variables_instantiation_map,
-                                      bound_variables)
+                                      set())
         elif is_relation(formula.root):
             if formula.root not in relations_instantiation_map:
                 return formula.substitute(constants_and_variables_instantiation_map, set())
@@ -454,6 +454,7 @@ class Schema:
 
 
 
+
 @frozen
 class Proof:
     """An immutable proof in first-order predicate logic, comprised of a list of
@@ -556,6 +557,14 @@ class Proof:
             """
             assert line_number < len(lines) and lines[line_number] is self
             # Task 9.5
+            for _assumption in assumptions:
+                if lines[line_number].formula == _assumption.instantiate(self.instantiation_map):
+                    return True
+            return False
+
+
+
+
 
     @frozen
     class MPLine:
