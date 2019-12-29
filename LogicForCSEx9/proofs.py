@@ -636,6 +636,29 @@ class Proof:
             assert line_number < len(lines) and lines[line_number] is self
             # Task 9.6
 
+            # case where the assumptions from MP comes after the conclusion
+            if line_number < self.antecedent_line_number or\
+                line_number < self.conditional_line_number:
+                return False
+
+            # in line 'line number should be 'q'
+            # where in line antecedent_line_number should be 'p'
+            # and in line conditional_line_number should be 'p' -> 'q'
+            p = lines[self.antecedent_line_number].formula
+            p_q = lines[self.conditional_line_number].formula
+            q = lines[line_number].formula
+            if p != p_q.first or q != p_q.second:
+                return False
+            return True
+
+
+            if self.conditional_line_number > self.antecedent_line_number:
+                if lines[self.conditional_line_number].is_valid(assumptions, lines, self.conditional_line_number) and\
+                    lines[self.antecedent_line_number].is_valid(assumptions, lines, self.antecedent_line_number):
+                    return True
+            return False
+
+
     @frozen
     class UGLine:
         """An immutable proof line justified by the Universal Generalization
