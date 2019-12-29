@@ -11,7 +11,8 @@ from typing import AbstractSet, Mapping, Optional, Sequence, Set, Tuple, Union
 from logic_utils import fresh_variable_name_generator, frozen
 
 from propositions.syntax import Formula as PropositionalFormula, \
-                                is_variable as is_propositional_variable
+    is_variable as is_propositional_variable
+
 
 class ForbiddenVariableError(Exception):
     """Raised by `Term.substitute` and `Formula.substitute` when a substituted
@@ -28,6 +29,7 @@ class ForbiddenVariableError(Exception):
         assert is_variable(variable_name)
         self.variable_name = variable_name
 
+
 def is_constant(s: str) -> bool:
     """Checks if the given string is a constant name.
 
@@ -37,15 +39,17 @@ def is_constant(s: str) -> bool:
     Returns:
         ``True`` if the given string is a constant name, ``False`` otherwise.
     """
-    return  (((s[0] >= '0' and s[0] <= '9') or (s[0] >= 'a' and s[0] <= 'd'))
-             and s.isalnum()) or s == '_'
+    return (((s[0] >= '0' and s[0] <= '9') or (s[0] >= 'a' and s[0] <= 'd'))
+            and s.isalnum()) or s == '_'
+
 
 # any number or char
-def is_alphanumeric(_str : str):
+def is_alphanumeric(_str: str):
     for char in _str:
         if not (char.isalpha() or char.isdigit()):
             return False
     return True
+
 
 def is_variable(s: str) -> bool:
     """Checks if the given string is a variable name.
@@ -58,6 +62,7 @@ def is_variable(s: str) -> bool:
     """
     return s[0] >= 'u' and s[0] <= 'z' and s.isalnum()
 
+
 def is_function(s: str) -> bool:
     """Checks if the given string is a function name.
 
@@ -69,15 +74,17 @@ def is_function(s: str) -> bool:
     """
     return s[0] >= 'f' and s[0] <= 't' and s.isalnum()
 
+
 """
 Helper function for task 9.1
 get a term, and return True if term contain illegal variable,
 raise exception otherwise
 """
-def check_if_term_contain_illegal_var(_term : Term,
+
+
+def check_if_term_contain_illegal_var(_term: Term,
                                       forbidden_variables: AbstractSet[str]
                                       = frozenset()):
-
     # if its function, check all the arguments of the function
     if is_function(_term.root):
         for _arg in _term.arguments:
@@ -86,6 +93,8 @@ def check_if_term_contain_illegal_var(_term : Term,
         if _term.root in forbidden_variables:
             raise ForbiddenVariableError(_term.root)
     return True
+
+
 @frozen
 class Term:
     """An immutable first-order term in tree representation, composed from
@@ -154,7 +163,7 @@ class Term:
             current term, ``False`` otherwise.
         """
         return isinstance(other, Term) and str(self) == str(other)
-        
+
     def __ne__(self, other: object) -> bool:
         """Compares the current term with the given one.
 
@@ -232,7 +241,6 @@ class Term:
         # Task 7.3.2
         return Term.parse_prefix(s)[0]
 
-
     def constants(self) -> Set[str]:
         """Finds all constant names in the current term.
 
@@ -267,7 +275,6 @@ class Term:
             pass
         return set(lst_of_variable)
 
-
     def functions(self) -> Set[Tuple[str, int]]:
         """Finds all function names in the current term, along with their
         arities.
@@ -279,7 +286,7 @@ class Term:
         # Task 7.5.3
         lst_of_functions = list()
         if is_function(self.root):
-            lst_of_functions.append((self.root, len(self.arguments), ))
+            lst_of_functions.append((self.root, len(self.arguments),))
         try:
             for _term in self.arguments:
                 lst_of_functions += _term.functions()
@@ -288,7 +295,8 @@ class Term:
         return set(lst_of_functions)
 
     def substitute(self, substitution_map: Mapping[str, Term],
-                   forbidden_variables: AbstractSet[str] = frozenset()) -> Term:
+                   forbidden_variables: AbstractSet[
+                       str] = frozenset()) -> Term:
         """Substitutes in the current term, each constant name `name` or
         variable name `name` that is a key in `substitution_map` with the term
         `substitution_map[name]`.
@@ -325,7 +333,7 @@ class Term:
         # Task 9.1
         new_arg_lst = list()
         if is_function(self.root):
-            for idx,arg in enumerate(self.arguments):
+            for idx, arg in enumerate(self.arguments):
                 if is_function(arg.root):
                     new_arg_lst.append(arg.substitute(substitution_map,
                                                       forbidden_variables))
@@ -336,7 +344,8 @@ class Term:
                         # if the substituted term contain forbidden var,
                         # the the below function will raise exception
                         check_if_term_contain_illegal_var(substitute_term
-                                                          ,forbidden_variables)
+                                                          ,
+                                                          forbidden_variables)
                         # else, its legal term
                         new_arg_lst.append(substitute_term)
                     # if no need to substitute this variable or constant
@@ -356,6 +365,7 @@ class Term:
         else:
             return Term(self.root, new_arg_lst)
 
+
 def is_equality(s: str) -> bool:
     """Checks if the given string is the equality relation.
 
@@ -368,6 +378,7 @@ def is_equality(s: str) -> bool:
     """
     return s == '='
 
+
 def is_relation(s: str) -> bool:
     """Checks if the given string is a relation name.
 
@@ -378,6 +389,7 @@ def is_relation(s: str) -> bool:
         ``True`` if the given string is a relation name, ``False`` otherwise.
     """
     return s[0] >= 'F' and s[0] <= 'T' and s.isalnum()
+
 
 def is_unary(s: str) -> bool:
     """Checks if the given string is a unary operator.
@@ -390,6 +402,7 @@ def is_unary(s: str) -> bool:
     """
     return s == '~'
 
+
 def is_binary(s: str) -> bool:
     """Checks if the given string is a binary operator.
 
@@ -400,6 +413,7 @@ def is_binary(s: str) -> bool:
         ``True`` if the given string is a binary operator, ``False`` otherwise.
     """
     return s == '&' or s == '|' or s == '->'
+
 
 def is_quantifier(s: str) -> bool:
     """Checks if the given string is a quantifier.
@@ -412,19 +426,23 @@ def is_quantifier(s: str) -> bool:
     """
     return s == 'A' or s == 'E'
 
+
 """
 Used this function for task 9.2,
 This function getting a dict, and unwanted element, 
 and return the copy of the dict without this element, or the dict it self 
 if it already does not contain that element
 """
+
+
 def copy_dict_without_one_element(_dict, element_to_remove):
     # if the element already not in the dict, than return the dict as is.
     if not element_to_remove in _dict:
         return _dict
-    new_dict = dict(_dict) # shallow copy
+    new_dict = dict(_dict)  # shallow copy
     del new_dict[element_to_remove]
     return new_dict
+
 
 @frozen
 class Formula:
@@ -491,7 +509,7 @@ class Formula:
             assert isinstance(arguments_or_first_or_variable, Formula) and \
                    second_or_predicate is not None
             self.root, self.first, self.second = \
-                root, arguments_or_first_or_variable, second_or_predicate           
+                root, arguments_or_first_or_variable, second_or_predicate
         else:
             assert is_quantifier(root)
             # Populate self.variable and self.predicate
@@ -538,7 +556,7 @@ class Formula:
             current formula, ``False`` otherwise.
         """
         return isinstance(other, Formula) and str(self) == str(other)
-        
+
     def __ne__(self, other: object) -> bool:
         """Compares the current formula with the given one.
 
@@ -826,10 +844,10 @@ class Formula:
 
         return set_of_relations
 
-
     def substitute(self, substitution_map: Mapping[str, Term],
-                   forbidden_variables: AbstractSet[str] = frozenset(), var_of_quantifer = None) -> \
-                Formula:
+                   forbidden_variables: AbstractSet[str] = frozenset(),
+                   var_of_quantifer=None) -> \
+            Formula:
         """Substitutes in the current formula, each constant name `name` or free
         occurrence of variable name `name` that is a key in `substitution_map`
         with the term `substitution_map[name]`.
@@ -894,16 +912,18 @@ class Formula:
                 # recursively call first and second (first , binary_operator, second)
                 return Formula(self.root,
                                self.first.substitute(substitution_map,
-                                                     forbidden_variables, var_of_quantifer),
+                                                     forbidden_variables,
+                                                     var_of_quantifer),
                                self.second.substitute(substitution_map,
-                                                     forbidden_variables, var_of_quantifer))
+                                                      forbidden_variables,
+                                                      var_of_quantifer))
             else:
                 # recursively call first and second (first , binary_operator, second)
                 return Formula(self.root,
                                self.first.substitute(substitution_map,
                                                      forbidden_variables),
                                self.second.substitute(substitution_map,
-                                                     forbidden_variables))
+                                                      forbidden_variables))
 
         else:
             # must be quantifier (for example Ax(x=plus(x,0)))
@@ -919,7 +939,7 @@ class Formula:
 
             new_predicate = self.predicate.substitute(
                 copy_dict_without_one_element(substitution_map, self.variable),
-                                              new_forbidden_var, self.variable)
+                new_forbidden_var, self.variable)
             return Formula(self.root, self.variable, new_predicate)
 
     def propositional_skeleton(self) -> Tuple[PropositionalFormula,
@@ -960,4 +980,4 @@ class Formula:
         """
         for key in substitution_map:
             assert is_propositional_variable(key)
-        # Task 9.10
+            # Task 9.10
