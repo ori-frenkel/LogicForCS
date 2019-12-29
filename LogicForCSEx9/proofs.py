@@ -652,13 +652,6 @@ class Proof:
             return True
 
 
-            if self.conditional_line_number > self.antecedent_line_number:
-                if lines[self.conditional_line_number].is_valid(assumptions, lines, self.conditional_line_number) and\
-                    lines[self.antecedent_line_number].is_valid(assumptions, lines, self.antecedent_line_number):
-                    return True
-            return False
-
-
     @frozen
     class UGLine:
         """An immutable proof line justified by the Universal Generalization
