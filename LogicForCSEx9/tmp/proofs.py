@@ -116,7 +116,7 @@ class Schema:
                     that is disallowed during a schema instantiation.
                 relation_name: the relation name during whose substitution the
                     relevant occurrence of the variable name is to become bound.
-            """            
+            """
             assert is_variable(variable_name)
             assert is_relation(relation_name)
             self.variable_name = variable_name
@@ -263,8 +263,6 @@ class Schema:
                            {'_' : instantiated_argument}, bound_variables)
             except ForbiddenVariableError as e:
                 raise Schema.BoundVariableError(str(e), formula.root)
-
-
         # if it unary, than is the same answer
         # as ~ + _instantiate_helper(with formula.first)
         elif is_unary(formula.root):
@@ -308,7 +306,7 @@ class Schema:
         templates of the current schema to expressions.
 
         Parameters:
-        
+
             instantiation_map: map from templates of the current schema to
                 expressions of the type for which they serve as placeholders.
                 That is, constant names are mapped to terms, variable names are
@@ -353,7 +351,7 @@ class Schema:
                argument of that invocation becomes bound by a quantification in
                the formula that is substituted for the invocation of the
                template relation name.
-            
+
         Examples:
             >>> s = Schema(Formula.parse('(Q(c1,c2)->(R(c1)->R(c2)))'),
             ...            {'c1', 'c2', 'R'})
@@ -370,12 +368,12 @@ class Schema:
             (plus(a,b)=c->plus(a,b)=c)
 
             For the following schema:
-            
+
             >>> s = Schema(Formula.parse('(Q(d)->Ax[(R(x)->Q(f(c)))])'),
             ...            {'R', 'Q', 'x', 'c'})
 
             the following succeeds:
-            
+
             >>> s.instantiate({'R': Formula.parse('_=0'),
             ...                'Q': Formula.parse('x=_'),
             ...                'x': 'w'})
@@ -392,7 +390,7 @@ class Schema:
             and the following returns ``None`` because ``'z'`` that is free in
             the assignment to ``'Q'`` is to become bound by a quantification in
             the instantiated schema formula:
-            
+
             >>> s.instantiate({'R': Formula.parse('_=0'),
             ...                'Q': Formula.parse('s(z)=_'),
             ...                'x': 'z'})
@@ -433,7 +431,7 @@ class Proof:
     assumptions: FrozenSet[Schema]
     conclusion: Formula
     lines: Tuple[Proof.Line, ...]
-    
+
     def __init__(self, assumptions: AbstractSet[Schema], conclusion: Formula,
                  lines: Sequence[Proof.Line]) -> None:
         """Initializes a `Proof` from its assumptions/axioms, conclusion,
@@ -464,7 +462,7 @@ class Proof:
         formula: Formula
         assumption: Schema
         instantiation_map: InstantiationMap
-    
+
         def __init__(self, formula: Formula, assumption: Schema,
                      instantiation_map: InstantiationMap) -> None:
             """Initializes an `~Proof.AssumptionLine` from its formula, its
@@ -518,7 +516,7 @@ class Proof:
             """
             assert line_number < len(lines) and lines[line_number] is self
             # Task 9.5
-    
+
     @frozen
     class MPLine:
         """An immutable proof line justified by the Modus Ponens (MP) inference
@@ -685,7 +683,7 @@ class Proof:
 
     #: An immutable proof line.
     Line = Union[AssumptionLine, MPLine, UGLine, TautologyLine]
-                 
+
     def __repr__(self) -> str:
         """Computes a string representation of the current proof.
 
@@ -700,7 +698,7 @@ class Proof:
             r += ('%3d) ' % i) + str(self.lines[i]) + '\n'
         r += 'QED\n'
         return r
-        
+
     def is_valid(self) -> bool:
         """Checks if the current proof is a valid proof of its claimed
         conclusion from (instances of) its assumptions/axioms.

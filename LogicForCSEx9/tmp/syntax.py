@@ -889,20 +889,22 @@ class Formula:
             return Formula(self.root, new_arg)
 
         elif is_binary(self.root):
-            # add for forbidden var the quantifier variable
+            # add for forbidden var the Ax 0
             if var_of_quantifer is not None:
-                new_forbidden_var = set()
-                for var in forbidden_variables:
-                    new_forbidden_var.add(var)
-                new_forbidden_var.add(var_of_quantifer)
-                forbidden_variables = new_forbidden_var
+                # recursively call first and second (first , binary_operator, second)
+                return Formula(self.root,
+                               self.first.substitute(substitution_map,
+                                                     forbidden_variables, var_of_quantifer),
+                               self.second.substitute(substitution_map,
+                                                     forbidden_variables, var_of_quantifer))
+            else:
+                # recursively call first and second (first , binary_operator, second)
+                return Formula(self.root,
+                               self.first.substitute(substitution_map,
+                                                     forbidden_variables),
+                               self.second.substitute(substitution_map,
+                                                     forbidden_variables))
 
-            # recursively call first and second (first , binary_operator, second)
-            return Formula(self.root,
-                           self.first.substitute(substitution_map,
-                                                 forbidden_variables),
-                           self.second.substitute(substitution_map,
-                                                 forbidden_variables))
         else:
             # must be quantifier (for example Ax(x=plus(x,0)))
             assert is_quantifier(self.root)
@@ -913,7 +915,7 @@ class Formula:
             new_forbidden_var = list()
             for _forbidden_var in forbidden_variables:
                 new_forbidden_var.append(_forbidden_var)
-            new_forbidden_var.append(self.variable)
+            # new_forbidden_var.append(self.variable)
 
             new_predicate = self.predicate.substitute(
                 copy_dict_without_one_element(substitution_map, self.variable),
