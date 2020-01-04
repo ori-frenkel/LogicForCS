@@ -932,18 +932,17 @@ class Formula:
             #  'variable occurrence that becomes bound when that term is
             #    substituted into the current formula'
             # just adding self.variable to forbidden variable
-            new_forbidden_var = list()
-            for _forbidden_var in forbidden_variables:
-                new_forbidden_var.append(_forbidden_var)
+            new_forbidden_var = list(forbidden_variables)
             # new_forbidden_var.append(self.variable)
 
             new_predicate = self.predicate.substitute(
-                copy_dict_without_one_element(substitution_map, self.variable),
+                copy_dict_without_one_element(substitution_map,
+                                               self.variable),
                 new_forbidden_var, self.variable)
             return Formula(self.root, self.variable, new_predicate)
 
-    def propositional_skeleton(self) -> Tuple[PropositionalFormula,
-                                              Mapping[str, Formula]]:
+    def propositional_skeleton(self, mapping=None) ->\
+            Tuple[PropositionalFormula, Mapping[str, Formula]]:
         """Computes a propositional skeleton of the current formula.
 
         Returns:
@@ -959,7 +958,42 @@ class Formula:
             propositional formula to the subformula for which it was
             substituted.
         """
-        # Task 9.6
+        # Task 9.8
+        if not is_binary(self.root) and not is_unary(self.root):
+            if mapping is not None:
+                # check if the formula was already seen, if so, don't remap it
+                if self in mapping.keys():
+                    return PropositionalFormula(mapping[self]), dict()
+            # else, not in mapping, define a new variable for it
+            new = next(fresh_variable_name_generator)
+            pf = PropositionalFormula(new)
+            m = {new: self}
+            # return propositional skeleton of the Formula
+            return pf, m
+        if is_unary(self.root):
+            # get the first's side propositional skeleton
+            ps1 = Formula.propositional_skeleton(self.first, mapping)
+            pf = PropositionalFormula(self.root, first=ps1[0])
+            # return new propositional formula and the map
+            return pf, ps1[1]
+        if is_binary(self.root):
+            # get the first's side propositional skeleton
+            ps1 = Formula.propositional_skeleton(self.first, mapping)
+            if mapping is not None:
+                new_dict = dict(mapping)
+            else:
+                new_dict = dict()
+            for key in ps1[1]:
+                new_dict[ps1[1][key]] = key
+            # get the second's side propositional skeleton
+            ps2 = Formula.propositional_skeleton(self.second, new_dict)
+            pf = PropositionalFormula(self.root, first=ps1[0], second=ps2[0])
+            joined_map = dict(ps1[1])
+            joined_map.update(ps2[1])
+            # return new propositional formula and the two sides joined map
+            return pf, joined_map
+
+
 
     @staticmethod
     def from_propositional_skeleton(skeleton: PropositionalFormula,
@@ -980,4 +1014,15 @@ class Formula:
         """
         for key in substitution_map:
             assert is_propositional_variable(key)
-            # Task 9.10
+        # Task 9.10
+        if skeleton.root in substitution_map:
+            return substitution_map[skeleton.root]
+
+        elif is_unary(skeleton.root):
+            return Formula(skeleton.root,
+                           Formula.from_propositional_skeleton(
+                               skeleton.first, substitution_map))
+        elif is_binary(skeleton.root):
+            return Formula(skeleton.root, Formula.from_propositional_skeleton(skeleton.first, substitution_map),
+                           Formula.from_propositional_skeleton(skeleton.second, substitution_map))
+

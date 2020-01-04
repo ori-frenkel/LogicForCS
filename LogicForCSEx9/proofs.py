@@ -8,7 +8,7 @@ from typing import AbstractSet, FrozenSet, Mapping, Sequence, Tuple, Union
 
 from logic_utils import frozen, frozendict
 
-# from propositions.semantics import is_tautology as is_propositional_tautology
+from propositions.semantics import is_tautology as is_propositional_tautology
 
 from predicates.syntax import *
 
@@ -637,8 +637,8 @@ class Proof:
             # Task 9.6
 
             # case where the assumptions from MP comes after the conclusion
-            if line_number < self.antecedent_line_number or\
-                line_number < self.conditional_line_number:
+            if line_number <= self.antecedent_line_number or\
+                line_number <= self.conditional_line_number:
                 return False
 
             # in line 'line number should be 'q'
@@ -707,6 +707,13 @@ class Proof:
             """
             assert line_number < len(lines) and lines[line_number] is self
             # Task 9.7
+            if line_number <= self.predicate_line_number:
+                return False
+            predicate = lines[self.predicate_line_number].formula
+            ug = lines[line_number].formula
+            if ug.root != 'A' or ug.predicate != predicate:
+                return False
+            return True
 
     @frozen
     class TautologyLine:
@@ -750,6 +757,11 @@ class Proof:
             """
             assert line_number < len(lines) and lines[line_number] is self
             # Task 9.9
+            ps = Formula.propositional_skeleton(lines[line_number].formula)
+            if not is_propositional_tautology(ps[0]):
+                return False
+            return True
+
 
     #: An immutable proof line.
     Line = Union[AssumptionLine, MPLine, UGLine, TautologyLine]
@@ -874,7 +886,14 @@ def axiom_specialization_map_to_schema_instantiation_map(
         assert is_propositional_variable(variable)
     for key in substitution_map:
         assert is_propositional_variable(key)
-        # Task 9.11.1
+    # Task 9.11.1
+    new_propositions = dict()
+    for proposition in propositional_specialization_map.keys():
+        new_propositions[proposition[0].upper()+proposition[1:]] =\
+            Formula.from_propositional_skeleton(
+                propositional_specialization_map[proposition], substitution_map)
+    return new_propositions
+
 
 
 def prove_from_skeleton_proof(formula: Formula,
@@ -905,17 +924,42 @@ def prove_from_skeleton_proof(formula: Formula,
         skeleton_proof.statement.conclusion, substitution_map) == formula
     # Task 9.11.2
 
-#
-# def prove_tautology(tautology: Formula) -> Proof:
-#     """Proves the given predicate-logic tautology.
-#
-#     Parameters:
-#         tautology: predicate-logic tautology to prove.
-#
-#     Returns:
-#         A valid proof of the given predicate-logic tautology from the axioms
-#         `PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS` via only assumption lines
-#         and MP lines.
-#     """
-#     assert is_propositional_tautology(tautology.propositional_skeleton()[0])
-# Task 9.12
+    assumptions = PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS
+    conclusion = formula
+    lines = list()
+    for line in skeleton_proof.lines:
+        formula = Formula.from_propositional_skeleton(line.formula, substitution_map)
+        if len(line.assumptions) == 0:  # line is a specialization of an axiom
+            axiom_specialization_map = PropositionalInferenceRule.\
+                formula_specialization_map(line.rule.conclusion, line.formula)
+            instantiation_map = \
+                axiom_specialization_map_to_schema_instantiation_map(
+                    axiom_specialization_map, substitution_map)
+            axiom = PROPOSITIONAL_AXIOM_TO_SCHEMA[line.rule]
+            lines.append(Proof.AssumptionLine(formula, axiom,
+                                              instantiation_map))
+        else:  # line rule is MP
+            lines.append(Proof.MPLine(formula, line.assumptions[0],
+                line.assumptions[1]))
+    lines = tuple(lines)
+    return Proof(assumptions, conclusion, lines)
+
+def prove_tautology(tautology: Formula) -> Proof:
+    """Proves the given predicate-logic tautology.
+
+    Parameters:
+        tautology: predicate-logic tautology to prove.
+
+    Returns:
+        A valid proof of the given predicate-logic tautology from the axioms
+        `PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS` via only assumption lines
+        and MP lines.
+    """
+    assert is_propositional_tautology(tautology.propositional_skeleton()[0])
+
+    # Task 9.12
+    propositional_skeleton = Formula.propositional_skeleton(tautology)
+    skeleton_proof = prove_propositional_tautology(propositional_skeleton[0])
+    return prove_from_skeleton_proof(tautology, skeleton_proof,
+                                     propositional_skeleton[1])
+
