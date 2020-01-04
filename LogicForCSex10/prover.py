@@ -11,6 +11,14 @@ from logic_utils import fresh_variable_name_generator
 from predicates.syntax import *
 from predicates.proofs import *
 
+# lst is a union of assumptions and conclusion
+# this function returning the formula encode
+# meaning : (p1->(p2->(p3->(p4->q))))
+def encode_helper(lst):
+    if len(lst) > 1:
+        return Formula('->', lst[0], encode_helper(lst[1:]))
+    return lst[0]
+
 class Prover:
     """A class for gradually creating a first-order logic proof from given
     assumptions as well as from the six axioms (`AXIOMS`) Universal
@@ -329,7 +337,7 @@ class Prover:
         # now using MP on those to line, we would get the instance
         # for example (Man(aristotle)->Mortal(aristotle))
 
-        last_line = self.add_mp(instantiation, line_number, len(self._lines) - 1)
+        last_line = self.add_mp(instantiation, line_number, step0)
         return last_line
 
 
@@ -355,6 +363,27 @@ class Prover:
         for line_number in line_numbers:
             assert line_number < len(self._lines)
         # Task 10.2
+
+        encoded_formula_lst = []
+        for line_num in line_numbers:
+            encoded_formula_lst.append(self._lines[line_num].formula)
+        if type(implication) == str:
+            encoded_formula_lst.append(Formula.parse(implication))
+        else:
+            encoded_formula_lst.append(implication)
+
+        # convert all the lines to line1->line2->line3->implication
+        # than add it as tautology
+        # than using mp 3 times in the example above, to get implication
+        encoded_formula = encode_helper(encoded_formula_lst)
+        step = self.add_tautology(encoded_formula)
+
+        for line_num in line_numbers:
+            encoded_formula = encoded_formula.second
+            step = self.add_mp(encoded_formula ,line_num, step)
+
+        return step
+
 
     def add_existential_derivation(self, consequent: Union[Formula, str],
                                    line_number1: int, line_number2: int) -> int:
