@@ -419,6 +419,26 @@ class Prover:
         assert conditional == Formula('->', quantified.predicate, consequent)
         # Task 10.3
 
+        # using UG to get Ax[lines[line_number2].formula]
+        step1 = self.add_ug(Formula('A', quantified.variable,
+                                    self._lines[line_number2].formula),
+                            line_number2)
+
+        # map for using Prover.ES
+        _map_step2 = {'x': quantified.variable,
+                'R': quantified.predicate.substitute(
+                    {quantified.variable: Term('_')}),
+                'Q': consequent}
+
+        formula_for_step2_antecedent = Formula('&', self._lines[step1].formula,
+                                               self._lines[line_number1].formula)
+        formula_for_step2 = Formula('->', formula_for_step2_antecedent,
+                                    consequent)
+        step2 = self.add_instantiated_assumption(formula_for_step2, Prover.ES,
+                                                 _map_step2)
+        step3 = self.add_tautological_implication(consequent, {line_number1, step1, step2})
+        return step3
+
     def add_flipped_equality(self, flipped: Union[Formula, str],
                              line_number: int) -> int:
         """Appends to the proof being created by the current prover a sequence
