@@ -924,6 +924,19 @@ class Formula:
                                                      forbidden_variables),
                                self.second.substitute(substitution_map,
                                                       forbidden_variables))
+        elif is_unary(self.root):
+            # add for forbidden var the Ax 0
+            if var_of_quantifer is not None:
+                # recursively call first and second (first , binary_operator, second)
+                return Formula(self.root,
+                               self.first.substitute(substitution_map,
+                                                     forbidden_variables,
+                                                     var_of_quantifer))
+            else:
+                # recursively call first and second (first , binary_operator, second)
+                return Formula(self.root,
+                               self.first.substitute(substitution_map,
+                                                     forbidden_variables))
 
         else:
             # must be quantifier (for example Ax(x=plus(x,0)))
