@@ -323,9 +323,9 @@ class Prover:
             g_c = Formula('->', quantified, instantiation)
 
         # map for using UI
-        _map = {'x' : quantified.variable,
-                'R' : quantified.predicate.substitute({quantified.variable: Term('_')}),
-                'c' : str(term)}
+        _map = {'x': quantified.variable,
+                'R': quantified.predicate.substitute({quantified.variable: Term('_')}),
+                'c': str(term)}
         step0 = self.add_instantiated_assumption(g_c, Prover.UI, _map)
 
         # line number contain the general(=quantified) , for example : Ax[(Man(x)->Mortal(x))]
@@ -380,7 +380,7 @@ class Prover:
 
         for line_num in line_numbers:
             encoded_formula = encoded_formula.second
-            step = self.add_mp(encoded_formula ,line_num, step)
+            step = self.add_mp(encoded_formula, line_num, step)
 
         return step
 
@@ -466,6 +466,25 @@ class Prover:
                                          flipped.arguments[0]])
         # Task 10.6
 
+        # map for using Prover.RX
+        _map_step1 = {'c': equality.arguments[0]}
+
+        formula_for_step1 = Formula('=', (equality.arguments[0], equality.arguments[0]))
+        step1 = self.add_instantiated_assumption(formula_for_step1,
+                                                 Prover.RX, _map_step1)
+
+        _map_step2 = {'c': equality.arguments[0],
+                      'd': equality.arguments[1],
+                      'R': Formula.parse("x=y").substitute({'x': Term('_'), 'y': equality.arguments[0]})}
+
+        formula_for_step2 = Formula('->', self._lines[step1].formula, flipped)
+        formula_for_step2 = Formula('->', equality, formula_for_step2)
+        step2 = self.add_instantiated_assumption(formula_for_step2, Prover.ME,
+                                                 _map_step2)
+        step3 = self.add_tautological_implication(flipped, {line_number, step1, step2})
+        return step3
+
+
     def add_free_instantiation(self, instantiation: Union[Formula, str],
                                line_number: int,
                                substitution_map:
@@ -514,6 +533,32 @@ class Prover:
         assert instantiation == \
                self._lines[line_number].formula.substitute(substitution_map)
         # Task 10.7
+        line_f = self._lines[line_number].formula
+        step1_f = line_f
+        step1 = line_number
+        new_variables = dict()
+        new_substitution_map = list()
+        for variable in line_f.free_variables():
+            if variable in substitution_map:
+                new_var = Term(next(fresh_variable_name_generator))
+                new_variables[variable] = new_var
+                new_substitution_map.append(substitution_map[variable])
+                conclusion = step1_f.substitute({variable: new_var})
+                step1_f = Formula('A', variable, step1_f)
+                step1 = self.add_ug(step1_f, step1)
+                step1 = self.add_universal_instantiation(conclusion, step1, new_var)
+                new_step1_f = Formula('A', new_var.root, conclusion)
+                step1 = self.add_ug(new_step1_f, step1)
+                step1_f = self._lines[step1].formula
+        step2 = step1
+        for i in range(len(new_substitution_map)):
+            conclusion = self._lines[step2].formula
+            conclusion = conclusion.predicate.substitute({
+                conclusion.variable: new_substitution_map[-(i+1)]})
+            step2 = self.add_universal_instantiation(conclusion, step2,
+                                                     new_substitution_map[-(i+1)])
+        return step2
+
 
     def add_substituted_equality(self, substituted: Union[Formula, str],
                                  line_number: int,
@@ -558,6 +603,28 @@ class Prover:
                              parametrized_term.substitute(
                                  {'_': equality.arguments[1]})])
         # Task 10.8
+        _map_step1 = {'c': equality.arguments[0],
+                      'd': equality.arguments[1],
+                      'R': Formula('=', (parametrized_term, substituted.arguments[0]))}
+
+        formula_for_step2 = Formula('=', (substituted.arguments[0],
+                                          substituted.arguments[0]))
+        reversed_substituted = Formula('=', (substituted.arguments[1],
+                                             substituted.arguments[0]))
+        formula_for_step1 = Formula('->', formula_for_step2, reversed_substituted)
+        formula_for_step1 = Formula('->', equality, formula_for_step1)
+        step1 = self.add_instantiated_assumption(formula_for_step1, Prover.ME,
+                                                 _map_step1)
+
+        _map_step2 = {'c': formula_for_step2.arguments[0]}
+        step2 = self.add_instantiated_assumption(formula_for_step2,
+                                                 Prover.RX, _map_step2)
+
+        step3 = self.add_tautological_implication(reversed_substituted,
+                                                  {line_number, step1, step2})
+        step4 = self.add_flipped_equality(substituted, step3)
+        return step4
+
 
     def _add_chaining_of_two_equalities(self, line_number1: int,
                                         line_number2: int) -> int:
@@ -590,6 +657,21 @@ class Prover:
         assert is_equality(equality2.root)
         assert equality1.arguments[1] == equality2.arguments[0]
         # Task 10.9.1
+        step1 = self.add_flipped_equality(Formula("=",
+                    (equality1.arguments[1], equality1.arguments[0])), line_number1)
+        _map_step2 = {'c': equality1.arguments[1],
+                      'd': equality1.arguments[0],
+                      'R': Formula.parse("y=z").substitute(
+                          {'y': Term('_'), 'z': equality2.arguments[1]})}
+
+        conclusion = Formula('=', (equality1.arguments[0],
+                                   equality2.arguments[1]))
+        formula_for_step2 = Formula('->', equality2, conclusion)
+        formula_for_step2 = Formula('->', self._lines[step1].formula, formula_for_step2)
+        step2 = self.add_instantiated_assumption(formula_for_step2, Prover.ME,
+                                                 _map_step2)
+        step3 = self.add_tautological_implication(conclusion, {step1, line_number2, step2})
+        return step3
 
     def add_chained_equality(self, chained: Union[Formula, str],
                              line_numbers: Sequence[int]) -> int:
@@ -635,3 +717,7 @@ class Prover:
             current_term = equality.arguments[1]
         assert chained.arguments[1] == current_term
         # Task 10.9.2
+        step = line_numbers[0]
+        for i in range(len(line_numbers) - 1):
+            step = self._add_chaining_of_two_equalities(step, line_numbers[i+1])
+        return step
