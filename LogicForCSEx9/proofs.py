@@ -711,8 +711,13 @@ class Proof:
                 return False
             predicate = lines[self.predicate_line_number].formula
             ug = lines[line_number].formula
-            if ug.root != 'A' or ug.predicate != predicate:
-                return False
+            
+            if type(ug.predicate) != Formula:
+                if ug.root != 'A' or ug.predicate.formula != predicate:
+                    return False
+            else:
+                if ug.root != 'A' or ug.predicate != predicate:
+                    return False
             return True
 
     @frozen
