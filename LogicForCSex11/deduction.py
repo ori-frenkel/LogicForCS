@@ -10,7 +10,7 @@ from predicates.proofs import *
 from predicates.prover import *
 
 def remove_assumption(proof: Proof, assumption: Formula,
-                      print_as_proof_forms: bool = False) -> Proof:
+                      print_as_proof_forms: bool = False, proof_contradiction = False) -> Proof:
     """Converts the given proof of some `conclusion` formula, an assumption of
     which is `assumption`, to a proof of
     ``'(``\ `assumption`\ ``->``\ `conclusion`\ ``)'`` from the same assumptions
@@ -107,6 +107,12 @@ def remove_assumption(proof: Proof, assumption: Formula,
                                                 _formula_US, Prover.US, _map)
             old_line_to_new_line_idx[idx] = proof_to_return.add_mp(
                                         _conclusion, ug_line, conditional_line)
+            
+    # using this for task 11.2, proof_by_way_of_contradiction
+    if proof_contradiction:
+        _conclusion = Formula('~', assumption)
+        last_line = len(proof_to_return._lines) - 1
+        proof_to_return.add_tautological_implication(_conclusion, {last_line})
 
     return proof_to_return.qed()
 
@@ -136,3 +142,5 @@ def proof_by_way_of_contradiction(proof: Proof, assumption: Formula,
         if isinstance(line, Proof.UGLine):
             assert line.formula.variable not in assumption.free_variables()
     # Task 11.2
+
+    return remove_assumption(proof, assumption, False, True)
