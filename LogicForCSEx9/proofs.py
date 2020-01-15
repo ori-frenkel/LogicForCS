@@ -1,775 +1,365 @@
 # (c) This file is part of the course
 # Mathematical Logic through Programming
 # by Gonczarowski and Nisan.
-# File name: predicates/proofs.py
+# File name: propositions/proofs.py
+
+"""Proofs by deduction in propositional logic."""
 
 from __future__ import annotations
-from typing import AbstractSet, FrozenSet, Mapping, Sequence, Tuple, Union
+from typing import AbstractSet, Iterable, FrozenSet, List, Mapping, Optional, \
+                   Set, Tuple, Union
 
-from logic_utils import frozen, frozendict
+from logic_utils import frozen
 
-from propositions.semantics import is_tautology as is_propositional_tautology
+from propositions.syntax import *
 
-from predicates.syntax import *
-
-#: A mapping from constant names, variable names, and relation names to
-#: terms, variable names, and formulas respectively.
-InstantiationMap = Mapping[str, Union[Term, str, Formula]]
-
+SpecializationMap = Mapping[str, Formula]
 
 @frozen
-class Schema:
-    """An immutable schema of predicate-logic formulas, comprised of a formula
-    along with the constant names, variable names, and nullary or unary relation
-    names in that formula that serve as templates. A template constant name is a
-    placeholder for any term. A template variable name is a placeholder for any
-    variable name. A template nullary or unary relation name is a placeholder
-    for any (parametrized for a unary relation name) predicate-logic formula
-    that does not refer to any variable name in the schema (except possibly
-    through its instantiated parameter for a unary relation name).
+class InferenceRule:
+    """An immutable inference rule in propositional logic, comprised by zero
+    or more assumed propositional formulae, and a conclusion propositional
+    formula.
 
     Attributes:
-        formula (`~predicates.syntax.Formula`): the formula of the schema.
-        templates (`~typing.FrozenSet`\\[`str`]): the constant, variable, and
-            relation names from the formula that serve as templates.
+        assumptions (`~typing.Tuple`\\[`~propositions.syntax.Formula`, ...]):
+            the assumptions of the rule.
+        conclusion (`~propositions.syntax.Formula`): the conclusion of the rule.
     """
-    formula: Formula
-    templates: FrozenSet[str]
+    assumptions: Tuple[Formula, ...]
+    conclusion: Formula
 
-    def __init__(self, formula: Formula,
-                 templates: AbstractSet[str] = frozenset()) -> None:
-        """Initializes a `Schema` from its formula and template names.
+    def __init__(self, assumptions: Iterable[Formula], conclusion: Formula) -> \
+        None:
+        """Initialized an `InferenceRule` from its assumptions and conclusion.
 
         Parameters:
-            formula : the formula for the schema.
-            templates: the constant, variable, and relation names from the
-                formula to serve as templates.
+            assumptions: the assumptions for the rule.
+            conclusion: the conclusion for the rule.
         """
-        for template in templates:
-            assert is_constant(template) or is_variable(template) or \
-                   is_relation(template)
-            if is_relation(template):
-                arities = {arity for relation, arity in formula.relations() if
-                           relation == template}
-                assert arities == {0} or arities == {1}
-        self.formula = formula
-        self.templates = frozenset(templates)
-
-    def __repr__(self) -> str:
-        """Computes a string representation of the current schema.
-
-        Returns:
-            A string representation of the current schema.
-        """
-        return 'Schema: ' + str(self.formula) + ' [templates: ' + \
-               ('none' if len(self.templates) == 0 else
-                ", ".join(sorted(self.templates))) + ']'
+        self.assumptions = tuple(assumptions)
+        self.conclusion = conclusion
 
     def __eq__(self, other: object) -> bool:
-        """Compares the current schema with the given one.
+        """Compares the current inference rule with the given one.
 
         Parameters:
             other: object to compare to.
 
         Returns:
-            ``True`` if the given object is a `Schema` object that equals the
-            current schema, ``False`` otherwise.
+            ``True`` if the given object is an `InferenceRule` object that
+            equals the current inference rule, ``False`` otherwise.
         """
-        return isinstance(other, Schema) and self.formula == other.formula and \
-               self.templates == other.templates
+        return (isinstance(other, InferenceRule) and
+                self.assumptions == other.assumptions and
+                self.conclusion == other.conclusion)
 
     def __ne__(self, other: object) -> bool:
-        """Compares the current schema with the given one.
+        """Compares the current inference rule with the given one.
 
         Parameters:
             other: object to compare to.
 
         Returns:
-            ``True`` if the given object is not a `Schema` object or does not
-            equal the current schema, ``False`` otherwise.
+            ``True`` if the given object is not an `InferenceRule` object or
+            does not does not equal the current inference rule, ``False``
+            otherwise.
         """
         return not self == other
 
     def __hash__(self) -> int:
         return hash(str(self))
 
-    class BoundVariableError(Exception):
-        """Raised by `_instantiate_helper` when a variable name becomes bound
-        during a schema instantiation in a way that is disallowed in that
-        context.
+    def __repr__(self) -> str:
+        """Computes a string representation of the current inference rule.
 
-        Attributes:
-            variable_name (`str`): the variable name that became bound in a way
-                that was disallowed during a schema instantiation.
-            relation_name (`str`): the relation name during whose substitution
-                the relevant occurrence of the variable name became bound.
+        Returns:
+            A string representation of the current inference rule.
         """
-        variable_name: str
-        relation_name: str
+        return str([str(assumption) for assumption in self.assumptions]) + \
+               ' ==> ' + "'" + str(self.conclusion) + "'"
 
-        def __init__(self, variable_name: str, relation_name: str):
-            """Initializes a `~Schema.BoundVariableError` from the offending
-            variable name and the relation name during whose substitution the
-            error occurred.
+    def variables(self) -> Set[str]:
+        """Finds all atomic propositions (variables) in the current inference
+        rule.
 
-            Parameters:
-                variable_name: variable name that is to become bound in a way
-                    that is disallowed during a schema instantiation.
-                relation_name: the relation name during whose substitution the
-                    relevant occurrence of the variable name is to become bound.
-            """
-            assert is_variable(variable_name)
-            assert is_relation(relation_name)
-            self.variable_name = variable_name
-            self.relation_name = relation_name
+        Returns:
+            A set of all atomic propositions used in the assumptions and in the
+            conclusion of the current inference rule.
+        """
+        # get variables from conclusion
+        variables = Formula.variables(self.conclusion)
+        # get variables from all assumptions and union them together
+        for assumption in self.assumptions:
+            variables = variables.union(Formula.variables(assumption))
+        return variables
+        # Task 4.1
+
+    def specialize(self, specialization_map: SpecializationMap) -> \
+            InferenceRule:
+        """Specializes the current inference rule by simultaneously substituting
+        each variable `v` that is a key in `specialization_map` with the
+        formula `specialization_map[v]`.
+
+        Parameters:
+            specialization_map: mapping defining the specialization to be
+                performed.
+
+        Returns:
+            The resulting inference rule.
+        """
+        for variable in specialization_map:
+            assert is_variable(variable)
+
+        # get specialized assumptions tuple
+        assumptions = list()
+        for assumption in self.assumptions:
+            assumptions.append(Formula.substitute_variables(assumption, specialization_map))
+        assumptions = tuple(assumptions)
+        # get specialized conclusion
+        conclusion = Formula.substitute_variables(self.conclusion, specialization_map)
+
+        return InferenceRule(assumptions, conclusion)
+        # Task 4.4
 
     @staticmethod
-    def _instantiate_helper(formula: Formula,
-                            constants_and_variables_instantiation_map:
-                            Mapping[str, Term],
-                            relations_instantiation_map: Mapping[str, Formula],
-                            bound_variables: AbstractSet[str] = frozenset()) \
-            -> Formula:
-        """Performs the following substitutions in the given formula:
-
-        1. Substitute each occurrence of each constant name or variable name
-           that is a key of the given constants and variables instantiation map
-           with the term mapped to this name by this map.
-        2. Substitute each nullary invocation of each relation name that is a
-           key of the given relations instantiation map with the formula mapped
-           to it by this map.
-        3. For each unary invocation of each relation name that is a key of the
-           given relations instantiation map, first perform all substitutions
-           to the argument of this invocation (according to the given constants
-           and variables instantiation map), then substitute the result for
-           each occurrence of the constant name ``'_'`` in the formula mapped to
-           the relation name by this map, and then substitute the result for
-           this unary invocation of the relation name.
-
-        Only names that originate in the given formula are substituted (i.e.,
-        names originating in one of the above substitutions are not subjected to
-        additional substitutions).
+    def merge_specialization_maps(
+            specialization_map1: Union[SpecializationMap, None],
+            specialization_map2: Union[SpecializationMap, None]) -> \
+            Union[SpecializationMap, None]:
+        """Merges the given specialization maps.
 
         Parameters:
-            formula: formula in which to perform the substitutions.
-            constants_and_variables_instantiation_map: map from constant names
-                and variable names in the given formula to terms to be
-                substituted for them, where the roots of terms mapped to
-                variable names are variable names.
-            relations_instantiation_map: map from nullary and unary relation
-                names in the given formula to formulas to be substituted for
-                them, where formulas to be substituted for unary relation names
-                are parametrized by the constant name ``'_'``.
-            bound_variables: variables to be treated as bound (see below).
+            specialization_map1: first map to merge, or ``None``.
+            specialization_map2: second map to merge, or ``None``.
 
         Returns:
-            The result of all substitutions.
-
-        Raises:
-            BoundVariableError: if one of the following occurs when substituting
-                an invocation of a relation name:
-
-                1. A free occurrence of a variable name in the formula
-                   mapped to the relation name by the given relations
-                   instantiation map is in `bound_variables` or becomes bound
-                   by a quantification in the given formula after all variable
-                   names in the given formula have been substituted.
-                2. For a unary invocation: a variable name that is in the
-                   argument to that invocation after all substitutions have been
-                   applied to this argument, becomes bound by a quantification
-                   in the formula mapped to the relation name by the given
-                   relations instantiation map.
-
-        Examples:
-            The following succeeds:
-
-            >>> Schema._instantiate_helper(
-            ...     Formula.parse('Ax[(Q(c)->R(x))]'), {'x': Term('w')},
-            ...     {'Q': Formula.parse('y=_')}, {'x', 'z'})
-            Aw[(y=c->R(w))]
-
-            however the following fails since ``'Q(c)'`` is to be substituted
-            with ``'y=c'`` while ``'y'`` is in the given bound variables:
-
-            >>> Schema._instantiate_helper(
-            ...     Formula.parse('Ax[(Q(c)->R(x))]'), {},
-            ...     {'Q': Formula.parse('y=_')}, {'x', 'y', 'z'})
-            Traceback (most recent call last):
-              ...
-            predicates.proofs.Schema.BoundVariableError: ('y', 'Q')
-
-            and the following fails since as ``'Q(c)'`` is to be substituted
-            with ``'y=c'``, ``'y'`` is to become bound by the quantification
-            ``'Ay'``:
-
-            >>> Schema._instantiate_helper(
-            ...     Formula.parse('Ax[(Q(c)->R(x))]'), {'x': Term('y')},
-            ...     {'Q': Formula.parse('y=_')})
-            Traceback (most recent call last):
-              ...
-            predicates.proofs.Schema.BoundVariableError: ('y', 'Q')
-
-            The following succeeds:
-
-            >>> Schema._instantiate_helper(
-            ...     Formula.parse('Ax[(Q(c)->R(x))]'),
-            ...     {'c': Term.parse('plus(d,x)')},
-            ...     {'Q': Formula.parse('Ey[y=_]')})
-            Ax[(Ey[y=plus(d,x)]->R(x))]
-
-            however the following fails since as ``'_'`` is to be substituted
-            with ``'plus(d,y)'`` in ``'Ey[y=_]'``, the ``'y'`` in
-            ``'plus(d,y)'`` is to become bound by the quantification ``'Ey'``:
-
-            >>> Schema._instantiate_helper(
-            ...     Formula.parse('Ax[(Q(c)->R(x))]'),
-            ...     {'c': Term.parse('plus(d,y)')},
-            ...     {'Q': Formula.parse('Ey[y=_]')})
-            Traceback (most recent call last):
-              ...
-            predicates.proofs.Schema.BoundVariableError: ('y', 'Q')
+            A single map containing all (key, value) pairs that appear in
+            either of the given maps, or ``None`` if one of the given maps is
+            ``None`` or if some key appears in both given maps but with
+            different values.
         """
-        for name in constants_and_variables_instantiation_map:
-            assert is_constant(name) or is_variable(name)
-            if is_variable(name):
-                assert is_variable(
-                    constants_and_variables_instantiation_map[name].root)
-        for relation in relations_instantiation_map:
-            assert is_relation(relation)
-        for variable in bound_variables:
-            assert is_variable(variable)
-        # Task 9.3
+        if specialization_map1 is not None:
+            for variable in specialization_map1:
+                assert is_variable(variable)
+        if specialization_map2 is not None:
+            for variable in specialization_map2:
+                assert is_variable(variable)
 
-        # already dealt with the case in task 9.2
-        if is_equality(formula.root):
-            return formula.substitute(
-                constants_and_variables_instantiation_map,
-                set())
-        elif is_relation(formula.root):
-            if formula.root not in relations_instantiation_map:
-                return formula.substitute(
-                    constants_and_variables_instantiation_map, set())
-            # formula = formula.substitute(constants_and_variables_instantiation_map)
-            else:
-                substituted_relation = relations_instantiation_map[
-                    formula.root]
-                # checking that free var doesn't in bounded_Var
-                for var in substituted_relation.free_variables():
-                    if var in bound_variables:
-                        raise Schema.BoundVariableError(var, formula.root)
-                # if relation has 0 arguments e.g R()
-                if len(formula.arguments) == 0:
-                    return relations_instantiation_map[formula.root]
-                # if relation have one argument e.g R(t)
-                else:
-                    if formula.arguments[0] in bound_variables:
-                        raise Schema.BoundVariableError(formula.arguments[0],
-                                                        formula.root)
-                    instantiated_argument = formula.arguments[0].substitute(
-                        constants_and_variables_instantiation_map, set())
-                    try:
-                        return substituted_relation.substitute(
-                            {'_': instantiated_argument}, set())
-                    except ForbiddenVariableError as e:
-                        raise Schema.BoundVariableError(str(e), formula.root)
+        # check if the mappings are illegal
+        if specialization_map1 is None or specialization_map2 is None:
+            return None
+        # check if one of the keys appear in both maps with different values
+        for variable in specialization_map1:
+            if variable in specialization_map2 and \
+                    specialization_map1[variable] != specialization_map2[variable]:
+                return None
 
-        # if it unary, than is the same answer
-        # as ~ + _instantiate_helper(with formula.first)
-        elif is_unary(formula.root):
-            return Formula(formula.root,
-                           Schema._instantiate_helper(formula.first,
-                                                      constants_and_variables_instantiation_map,
-                                                      relations_instantiation_map,
-                                                      bound_variables))
-        # similarly to unary case
-        elif is_binary(formula.root):
-            first = Schema._instantiate_helper(formula.first,
-                                               constants_and_variables_instantiation_map,
-                                               relations_instantiation_map,
-                                               bound_variables)
-            second = Schema._instantiate_helper(formula.second,
-                                                constants_and_variables_instantiation_map,
-                                                relations_instantiation_map,
-                                                bound_variables)
-            return Formula(formula.root, first, second)
+        # else, legal mappings
+        merged = dict()
+        for variable in specialization_map1:
+            merged[variable] = specialization_map1[variable]
+        for variable in specialization_map2:
+            merged[variable] = specialization_map2[variable]
+        return merged
+        # Task 4.5a
 
-        elif is_quantifier(formula.root):
-            formula_var = formula.variable
-            new_bound_variables = set()
-            for var in bound_variables:
-                new_bound_variables.add(var)
-            if formula.variable in constants_and_variables_instantiation_map:
-                formula_var = str(
-                    constants_and_variables_instantiation_map[formula_var])
-                new_bound_variables.add(formula_var)
-            else:
-                new_bound_variables.add(formula_var)
-            bound_variables = new_bound_variables
-            return Formula(formula.root, formula_var,
-                           Schema._instantiate_helper(formula.predicate,
-                                                      constants_and_variables_instantiation_map,
-                                                      relations_instantiation_map,
-                                                      bound_variables))
-
-    def instantiate(self, instantiation_map: InstantiationMap) -> \
-            Union[Formula, None]:
-        """Instantiates the current schema according to the given map from
-        templates of the current schema to expressions.
+    @staticmethod
+    def formula_specialization_map(general: Formula, specialization: Formula) \
+            -> Union[SpecializationMap, None]:
+        """Computes the minimal specialization map by which the given formula
+        specializes to the given specialization.
 
         Parameters:
-
-            instantiation_map: map from templates of the current schema to
-                expressions of the type for which they serve as placeholders.
-                That is, constant names are mapped to terms, variable names are
-                mapped to variable names, and relation names are mapped to
-                formulas where unary relations are mapped to formulas
-                parametrized by the the constant name ``'_'``.
+            general: non-specialized formula for which to compute the map.
+            specialization: specialization for which to compute the map.
 
         Returns:
-            The predicate-logic formula obtained by applying the substitutions
-            specified by the given map to the formula of the current schema:
-
-            1. Each occurrence in the formula of the current schema of each
-               template constant name specified in the given map is substituted
-               with the term to which that template constant name is mapped.
-            2. Each occurrence in the formula of the current schema of each
-               template variable name specified in the given map is substituted
-               with the variable name to which that template variable name is
-               mapped.
-            3. Each nullary invocation in the formula of the current schema of
-               each template relation name specified in the given map is
-               substituted with the formula to which that template relation name
-               is mapped.
-            4. Each unary invocation in the formula of the current schema of
-               each template relation name specified in the given map is
-               substituted with the formula to which that template relation name
-               is mapped, in which each occurrence of the constant name ``'_'``
-               is substituted with  the instantiated argument of that invocation
-               of the template relation name (that is, the term that results
-               from instantiating the argument of that invocation by performing
-               all the specified substitutions on it).
-
-            ``None`` is returned if one of the keys of the given map is not a
-            template of the current schema or if one of the following occurs
-            when substituting an invocation of a template relation name:
-
-            1. A free occurrence of a variable name in the formula substituted
-               for the template relation name becomes bound by a quantification
-               in the instantiated schema formula, except if the template
-               relation name is unary and this free occurrence originates in the
-               instantiated argument of the relation invocation.
-            2. For a unary invocation: a variable name in the instantiated
-               argument of that invocation becomes bound by a quantification in
-               the formula that is substituted for the invocation of the
-               template relation name.
-
-        Examples:
-            >>> s = Schema(Formula.parse('(Q(c1,c2)->(R(c1)->R(c2)))'),
-            ...            {'c1', 'c2', 'R'})
-            >>> s.instantiate({'c1': Term.parse('plus(x,1)'),
-            ...                'R': Formula.parse('Q(_,y)')})
-            (Q(plus(x,1),c2)->(Q(plus(x,1),y)->Q(c2,y)))
-            >>> s.instantiate({'c1': Term.parse('plus(x,1)'),
-            ...                'c2': Term.parse('c1'),
-            ...                'R': Formula.parse('Q(_,y)')})
-            (Q(plus(x,1),c1)->(Q(plus(x,1),y)->Q(c1,y)))
-
-            >>> s = Schema(Formula.parse('(P()->P())'), {'P'})
-            >>> s.instantiate({'P': Formula.parse('plus(a,b)=c')})
-            (plus(a,b)=c->plus(a,b)=c)
-
-            For the following schema:
-
-            >>> s = Schema(Formula.parse('(Q(d)->Ax[(R(x)->Q(f(c)))])'),
-            ...            {'R', 'Q', 'x', 'c'})
-
-            the following succeeds:
-
-            >>> s.instantiate({'R': Formula.parse('_=0'),
-            ...                'Q': Formula.parse('x=_'),
-            ...                'x': 'w'})
-            (x=d->Aw[(w=0->x=f(c))])
-
-            however, the following returns ``None`` because ``'d'`` is not a
-            template of the schema:
-
-            >>> s.instantiate({'R': Formula.parse('_=0'),
-            ...                'Q': Formula.parse('x=_'),
-            ...                'x': 'w',
-            ...                'd': Term('z')})
-
-            and the following returns ``None`` because ``'z'`` that is free in
-            the assignment to ``'Q'`` is to become bound by a quantification in
-            the instantiated schema formula:
-
-            >>> s.instantiate({'R': Formula.parse('_=0'),
-            ...                'Q': Formula.parse('s(z)=_'),
-            ...                'x': 'z'})
-
-            and the following returns ``None`` because ``'y'`` in the
-            instantiated argument ``'f(plus(a,y))'`` of the second invocation of
-            ``'Q'`` is to become bound by the quantification in the formula
-            substituted for ``'Q'``:
-
-            >>> s.instantiate({'R': Formula.parse('_=0'),
-            ...                'Q': Formula.parse('Ay[s(y)=_]'),
-            ...                'c': Term.parse('plus(a,y)')})
+            The computed specialization map, or ``None`` if `specialization` is
+            in fact not a specialization of `general`.
         """
-        for key in instantiation_map:
-            if is_variable(key):
-                assert is_variable(instantiation_map[key])
-            elif is_constant(key):
-                assert isinstance(instantiation_map[key], Term)
-            else:
-                assert is_relation(key)
-                assert isinstance(instantiation_map[key], Formula)
-        # Task 9.4
-        constant_and_var_instantiation_map = {}
-        relation_instantiation_map = {}
-        for to_replace in instantiation_map:
-            # if the Schema doesn't allow to replace this var or doesn't
-            # contain this var
-            if to_replace not in self.templates:
-                return None
-            if is_constant(to_replace):
-                # if the key is constant or variable, its need to be
-                # mapped to Term
-                if type(instantiation_map[to_replace]) != Term:
-                    return None
-                constant_and_var_instantiation_map[to_replace] = \
-                    instantiation_map[to_replace]
-            elif is_variable(to_replace):
-                if type(instantiation_map[to_replace]) != str:
-                    return None
-                constant_and_var_instantiation_map[to_replace] = Term(
-                    instantiation_map[to_replace])
-            elif is_relation(to_replace):
-                # if the key is relation, its need to be mapped to Formula
-                if type(instantiation_map[to_replace]) != Formula:
-                    return None
-                relation_instantiation_map[to_replace] = \
-                    instantiation_map[to_replace]
-            else:
-                return None
-        try:
-            to_return = self._instantiate_helper(self.formula,
-                                                 constant_and_var_instantiation_map,
-                                                 relation_instantiation_map,
-                                                 set())
-            return to_return
-        except Schema.BoundVariableError:
+        # general.root is a constant check if specialized root is same constant
+        if is_constant(general.root) and is_constant(specialization.root):
+            if general.root == specialization.root:
+                return {}
+            # else, the constants aren't equal
             return None
 
+        # general.root is a variable
+        if is_variable(general.root):
+            return {general.root: specialization}
+
+        # general.root is an unary operation
+        if is_unary(general.root) and is_unary(specialization.root) and \
+                general.root == specialization.root:
+            return InferenceRule.formula_specialization_map(general.first, specialization.first)
+
+        # general.root is a binary operation
+        if is_binary(general.root) and is_binary(specialization.root) and \
+                general.root == specialization.root:
+            map1 = InferenceRule.formula_specialization_map(general.first, specialization.first)
+            map2 = InferenceRule.formula_specialization_map(general.second, specialization.second)
+            return InferenceRule.merge_specialization_maps(map1, map2)
+
+        # else, no fitting between the two formulae
+        return None
+        # Task 4.5b
+
+    def specialization_map(self, specialization: InferenceRule) -> \
+            Union[SpecializationMap, None]:
+        """Computes the minimal specialization map by which the current
+        inference rule specializes to the given specialization.
+
+        Parameters:
+            specialization: specialization for which to compute the map.
+
+        Returns:
+            The computed specialization map, or ``None`` if `specialization` is
+            in fact not a specialization of the current rule.
+        """
+        assumptions = self.assumptions
+        s_assumptions = specialization.assumptions
+        # check if there is an equal number of assumptions in both rules
+        if len(assumptions) == len(s_assumptions):
+            specialization_map = {}
+            # go over all assumptions in the two inference rules and check if
+            # the s_assumption[i] is assumption[i] that was specialized
+            for i in range(len(assumptions)):
+                f_specialization_map = InferenceRule.formula_specialization_map(assumptions[i], s_assumptions[i])
+                specialization_map = InferenceRule.merge_specialization_maps(
+                        specialization_map, f_specialization_map)
+                if not specialization_map:  # the map is None
+                    return None
+
+            f_specialization_map = InferenceRule.formula_specialization_map(
+                self.conclusion, specialization.conclusion)
+            specialization_map = InferenceRule.merge_specialization_maps(specialization_map, f_specialization_map)
+
+            return specialization_map
+
+        else:  # different number of assumptions in the two inference rules
+            return None
+
+        # Task 4.5c
+
+    def is_specialization_of(self, general: InferenceRule) -> bool:
+        """Checks if the current inference rule is a specialization of the given
+        inference rule.
+
+        Parameters:
+            general: non-specialized inference rule to check.
+
+        Returns:
+            ``True`` if the current inference rule is a specialization of
+            `general`, ``False`` otherwise.
+        """
+        return general.specialization_map(self) is not None
 
 @frozen
 class Proof:
-    """An immutable proof in first-order predicate logic, comprised of a list of
-    assumptions/axioms, a conclusion, and a list of lines that prove the
-    conclusion from (instances of) these assumptions/axioms and from
-    tautologies, via the Modus Ponens (MP) and Universal Generalization (UG)
+    """A frozen deductive proof, comprised of a statement in the form of an
+    inference rule, a set of inference rules that may be used in the proof, and
+    a proof in the form of a list of lines that prove the statement via these
     inference rules.
 
     Attributes:
-        assumptions (`~typing.FrozenSet`\\[`Schema`]): the assumption/axioms of
+        statement (`InferenceRule`): the statement of the proof.
+        rules (`~typing.AbstractSet`\\[`InferenceRule`]): the allowed rules of
             the proof.
-        conclusion (`~predicates.syntax.Formula`): the conclusion of the proof.
-        lines (`~typing.Tuple`\\[`Line`\]): the lines of the proof.
+        lines (`~typing.Tuple`\\[`Line`]): the lines of the proof.
     """
-    assumptions: FrozenSet[Schema]
-    conclusion: Formula
+    statment: InferenceRule
+    rules: FrozenSet[InferenceRule]
     lines: Tuple[Proof.Line, ...]
 
-    def __init__(self, assumptions: AbstractSet[Schema], conclusion: Formula,
-                 lines: Sequence[Proof.Line]) -> None:
-        """Initializes a `Proof` from its assumptions/axioms, conclusion,
+    def __init__(self, statement: InferenceRule,
+                 rules: AbstractSet[InferenceRule],
+                 lines: Iterable[Proof.Line]) -> None:
+        """Initializes a `Proof` from its statement, allowed inference rules,
         and lines.
 
         Parameters:
-            assumptions: the assumption/axioms for the proof.
-            conclusion: the conclusion for the proof.
+            statement: the statement for the proof.
+            rules: the allowed rules for the proof.
             lines: the lines for the proof.
         """
-        self.assumptions = frozenset(assumptions)
-        self.conclusion = conclusion
+        self.statement = statement
+        self.rules = frozenset(rules)
         self.lines = tuple(lines)
 
     @frozen
-    class AssumptionLine:
-        """An immutable proof line justified as an instance of an
-        assumption/axiom.
+    class Line:
+        """An immutable line in a deductive proof, comprised of a formula which
+        is either justified as an assumption of the proof, or as the conclusion
+        of a specialization of an allowed inference rule of the proof, the
+        assumptions of which are justified by previous lines in the proof.
 
         Attributes:
-            formula (`~predicates.syntax.Formula`): the formula justified by the
-                line.
-            assumption (`Schema`): the assumption/axiom that instantiates the
-                formula.
-            instantiation_map (`~typing.Mapping`\\[`str`, `~typing.Union`\\[`~predicates.syntax.Term`, `str`, `~predicates.syntax.Formula`]]):
-                the map instantiating the formula from the assumption/axiom.
+            formula (`~propositions.syntax.Formula`): the formula justified by
+                the line.
+            rule (`~typing.Optional`\\[`InferenceRule`]): the inference rule out
+                of those allowed in the proof, a specialization of which
+                concludes the formula, or ``None`` if the formula is justified
+                as an assumption of the proof.
+            assumptions
+                (`~typing.Optional`\\[`~typing.Tuple`\\[`int`]): a tuple of zero
+                or more indices of previous lines in the proof whose formulae
+                are the respective assumptions of the specialization of the rule
+                that concludes the formula, if the formula is not justified as
+                an assumption of the proof.
         """
         formula: Formula
-        assumption: Schema
-        instantiation_map: InstantiationMap
+        rule: Optional[InferenceRule]
+        assumptions: Optional[Tuple[int, ...]]
 
-        def __init__(self, formula: Formula, assumption: Schema,
-                     instantiation_map: InstantiationMap) -> None:
-            """Initializes an `~Proof.AssumptionLine` from its formula, its
-            justifying assumption, and its instantiation map from the justifying
-            assumption.
+        def __init__(self, formula: Formula,
+                     rule: Optional[InferenceRule] = None,
+                     assumptions: Optional[Iterable[int]] = None) -> None:
+            """Initializes a `~Proof.Line` from its formula, and optionally its
+            rule and indices of justifying previous lines.
 
             Parameters:
-                formula: the formula to be justified by the line.
-                assumption: the assumption/axiom that instantiates the formula.
-                instantiation_map: the map instantiating the formula from the
-                    assumption/axiom.
+                formula: the formula to be justified by this line.
+                rule: the inference rule out of those allowed in the proof, a
+                    specialization of which concludes the formula, or ``None``
+                    if the formula is to be justified as an assumption of the
+                    proof.
+                assumptions: an iterable over indices of previous lines in the
+                    proof whose formulae are the respective assumptions of the
+                    specialization of the rule that concludes the formula, or
+                    ``None`` if the formula is to be justified as an assumption
+                    of the proof.
             """
+            assert (rule is None and assumptions is None) or \
+                   (rule is not None and assumptions is not None)
             self.formula = formula
-            self.assumption = assumption
-            for key in instantiation_map:
-                if is_variable(key):
-                    assert is_variable(instantiation_map[key])
-                elif is_constant(key):
-                    assert isinstance(instantiation_map[key], Term)
-                else:
-                    assert is_relation(key)
-                    assert isinstance(instantiation_map[key], Formula)
-            self.instantiation_map = frozendict(instantiation_map)
+            self.rule = rule
+            if assumptions is not None:
+                self.assumptions = tuple(assumptions)
 
         def __repr__(self) -> str:
-            """Computes a string representation of the current line.
+            """Computes a string representation of the current proof line.
 
             Returns:
-                A string representation of the current line.
+                A string representation of the current proof line.
             """
-            return str(self.formula) + "    (Assumption " + \
-                   str(self.assumption) + " instantiated with " + \
-                   str(self.instantiation_map) + ")"
-
-        def is_valid(self, assumptions: AbstractSet[Schema],
-                     lines: Sequence[Proof.Line], line_number: int) -> bool:
-            """Checks if the current line is validly justified in the context of
-            the specified proof.
-
-            Parameters:
-                assumptions: assumptions/axioms of the proof.
-                lines: lines of the proof.
-                line_number: line number of the current line in the given lines.
-
-            Returns:
-                ``True`` if the assumption/axiom of the current line is an
-                assumption/axiom of the specified proof and if the formula
-                justified by the current line is a valid instance of this
-                assumption/axiom via the instantiation map of the current line,
-                ``False`` otherwise.
-            """
-            assert line_number < len(lines) and lines[line_number] is self
-            # Task 9.5
-            # checking for each assumption, if the current line derived from
-            # one of the assumption with the mapping of instantiation_map
-            for _assumption in assumptions:
-                if lines[line_number].formula == _assumption.instantiate(
-                        self.instantiation_map):
-                    return True
-            return False
-
-    @frozen
-    class MPLine:
-        """An immutable proof line justified by the Modus Ponens (MP) inference
-        rule.
-
-        Attributes:
-            formula (`~predicates.syntax.Formula`): the formula justified by the
-                line.
-            antecedent_line_number (`int`): the line number of the antecedent of
-                the MP inference justifying the line.
-            conditional_line_number (`int`): the line number of the conditional
-                of the MP inference justifying the line.
-        """
-        formula: Formula
-        antecedent_line_number: int
-        conditional_line_number: int
-
-        def __init__(self, formula: Formula, antecedent_line_number: int,
-                     conditional_line_number: int) -> None:
-            """Initializes a `~Proof.MPLine` from its formula and line numbers
-            of the antecedent and conditional of the MP inference justifying it.
-
-            Parameters:
-                formula: the formula to be justified by the line.
-                antecedent_line_number: the line number of the antecedent of the
-                    MP inference justifying the line.
-                conditional_line_number: the line number of the conditional of
-                    the MP inference justifying the line.
-            """
-            self.formula = formula
-            self.antecedent_line_number = antecedent_line_number
-            self.conditional_line_number = conditional_line_number
-
-        def __repr__(self) -> str:
-            """Computes a string representation of the current line.
-
-            Returns:
-                A string representation of the current line.
-            """
-            return str(self.formula) + "    (MP from line " + \
-                   str(self.antecedent_line_number) + " and " + \
-                   str(self.conditional_line_number) + ")"
-
-        def is_valid(self, assumptions: AbstractSet[Schema],
-                     lines: Sequence[Proof.Line], line_number: int) -> bool:
-            """Checks if the current line is validly justified in the context of
-            the specified proof.
-
-            Parameters:
-                assumptions: assumptions/axioms of the proof.
-                lines: lines of the proof.
-                line_number: line number of the current line in the given lines.
-
-            Returns:
-                ``True`` if the formula of the line from the given lines whose
-                number is the conditional line number justifying the current
-                line is ``'(``\ `antecedent`\ ``->``\ `consequent`\ ``)'``,
-                where `antecedent` is the formula of the line from the given
-                lines whose number is the antecedent line number justifying the
-                current line and `consequent` is the formula justified by the
-                current line, ``False`` otherwise.
-            """
-            assert line_number < len(lines) and lines[line_number] is self
-            # Task 9.6
-
-            # case where the assumptions from MP comes after the conclusion
-            if line_number <= self.antecedent_line_number or\
-                line_number <= self.conditional_line_number:
-                return False
-
-            # in line 'line number should be 'q'
-            # where in line antecedent_line_number should be 'p'
-            # and in line conditional_line_number should be 'p' -> 'q'
-            p = lines[self.antecedent_line_number].formula
-            p_q = lines[self.conditional_line_number].formula
-            q = lines[line_number].formula
-            if p != p_q.first or q != p_q.second:
-                return False
-            return True
-
-
-    @frozen
-    class UGLine:
-        """An immutable proof line justified by the Universal Generalization
-        (UG) inference rule.
-
-        Attributes:
-            formula (`~predicates.syntax.Formula`): the formula justified by the
-                line.
-            predicate_line_number (`int`): the line number of the predicate of
-                the UG inference justifying the line.
-        """
-        formula: Formula
-        predicate_line_number: int
-
-        def __init__(self, formula: Formula, predicate_line_number: int) -> \
-                None:
-            """Initializes a `~Proof.UGLine` from its formula and line number of
-            the predicate of the UG inference justifying it.
-
-            Parameters:
-                formula: the formula to be justified by the line.
-                predicate_line_number: the line number of the predicate of the
-                    UG inference justifying the line.
-            """
-            self.formula = formula
-            self.predicate_line_number = predicate_line_number
-
-        def __repr__(self) -> str:
-            """Computes a string representation of the current line.
-
-            Returns:
-                A string representation of the current line.
-            """
-            return str(self.formula) + "    (UG of line " + \
-                   str(self.predicate_line_number) + ")"
-
-        def is_valid(self, assumptions: AbstractSet[Schema],
-                     lines: Sequence[Proof.Line], line_number: int) -> bool:
-            """Checks if the current line is validly justified in the context of
-            the specified proof.
-
-            Parameters:
-                assumptions: assumptions/axioms of the proof.
-                lines: lines of the proof.
-                line_number: line number of the current line in the given lines.
-
-            Returns:
-                ``True`` if the formula of the current line is of the form
-                ``'A``\\ `x`\ ``[``\ `predicate`\ ``]'``, where `predicate` is
-                the formula of the line from the given lines whose number is the
-                predicate line number justifying the current line and `x` is any
-                variable name, ``False`` otherwise.
-            """
-            assert line_number < len(lines) and lines[line_number] is self
-            # Task 9.7
-            if line_number <= self.predicate_line_number:
-                return False
-            predicate = lines[self.predicate_line_number].formula
-            ug = lines[line_number].formula
-            
-            if type(ug.predicate) != Formula:
-                if ug.root != 'A' or ug.predicate.formula != predicate:
-                    return False
+            if self.rule is None:
+                return str(self.formula)
             else:
-                if ug.root != 'A' or ug.predicate != predicate:
-                    return False
-            return True
+                return str(self.formula) + ' Inference Rule ' + \
+                       str(self.rule) + \
+                       ((" on " + str(self.assumptions))
+                        if len(self.assumptions) > 0 else '')
 
-    @frozen
-    class TautologyLine:
-        """An immutable proof line justified as a tautology.
-
-        Attributes:
-            formula (`~predicates.syntax.Formula`): the formula justified by the
-                line.
-        """
-        formula: Formula
-
-        def __init__(self, formula: Formula) -> None:
-            """Initializes a `~Proof.TautologyLine` from its formula.
-
-            Parameters:
-                formula: the formula to be justified by the line.
-            """
-            self.formula = formula
-
-        def __repr__(self) -> str:
-            """Computes a string representation of the current line.
+        def is_assumption(self) -> bool:
+            """Checks if the current proof line is justified as an assumption of
+            the proof.
 
             Returns:
-                A string representation of the current line.
+                ``True`` if the current proof line is justified as an assumption
+                of the proof, ``False`` otherwise.
             """
-            return str(self.formula) + "    (Tautology)"
-
-        def is_valid(self, assumptions: AbstractSet[Schema],
-                     lines: Sequence[Proof.Line], line_number: int) -> bool:
-            """Checks if the current line is validly justified in the context of
-            the specified proof.
-
-            Parameters:
-                assumptions: assumptions/axioms of the proof.
-                lines: lines of the proof.
-                line_number: line number of the current line in the given lines.
-
-            Returns:
-                ``True`` if the formula justified by the current line is a
-                (predicate-logic) tautology, ``False`` otherwise.
-            """
-            assert line_number < len(lines) and lines[line_number] is self
-            # Task 9.9
-            ps = Formula.propositional_skeleton(lines[line_number].formula)
-            if not is_propositional_tautology(ps[0]):
-                return False
-            return True
-
-
-    #: An immutable proof line.
-    Line = Union[AssumptionLine, MPLine, UGLine, TautologyLine]
+            return self.rule is None
 
     def __repr__(self) -> str:
         """Computes a string representation of the current proof.
@@ -777,194 +367,228 @@ class Proof:
         Returns:
             A string representation of the current proof.
         """
-        r = 'Proof of ' + str(self.conclusion) + ' from assumptions/axioms:\n'
-        for assumption in self.assumptions:
-            r += '  ' + str(assumption) + '\n'
-        r += 'Lines:\n'
+        r = 'Proof for ' + str(self.statement) + ' via inference rules:\n'
+        for rule in self.rules:
+            r += '  ' + str(rule) + '\n'
+        r += "Lines:\n"
         for i in range(len(self.lines)):
-            r += ('%3d) ' % i) + str(self.lines[i]) + '\n'
-        r += 'QED\n'
+            r += ("%3d) " % i) + str(self.lines[i]) + '\n'
         return r
 
+    def rule_for_line(self, line_number: int) -> Union[InferenceRule, None]:
+        """Computes the inference rule whose conclusion is the formula justified
+        by the specified line, and whose assumptions are the formulae justified
+        by the lines specified as the assumptions of that line.
+
+        Parameters:
+            line_number: index of the line according to which to construct the
+                inference rule.
+
+        Returns:
+            The constructed inference rule, with assumptions ordered in the
+            order of their indices in the specified line, or ``None`` if the
+            specified line is justified as an assumption.
+        """
+        assert line_number < len(self.lines)
+        line = self.lines[line_number]
+        if line.is_assumption():
+            return None
+        # else, this line is a conclusion
+        assumptions = list()
+        for i in line.assumptions:
+            assumptions.append(self.lines[i].formula)
+
+        assumptions = tuple(assumptions)
+        return InferenceRule(assumptions, line.formula)
+        # Task 4.6a
+
+    def is_line_valid(self, line_number: int) -> bool:
+        """Checks if the specified line validly follows from its justifications.
+
+        Parameters:
+            line_number: index of the line to check.
+
+        Returns:
+            If the specified line is justified as an assumption, then ``True``
+            if the formula justified by this line is an assumption of the
+            current proof, ``False`` otherwise. Otherwise (i.e., if the
+            specified line is justified as a conclusion of an inference rule),
+            then ``True`` if and only if all of the following hold:
+
+            1. The rule specified for that line is one of the allowed inference
+               rules in the current proof.
+            2. Some specialization of the rule specified for that line has
+               the formula justified by that line as its conclusion, and the
+               formulae justified by the lines specified as the assumptions of
+               that line (in the order of their indices in this line) as its
+               assumptions.
+        """
+        assert line_number < len(self.lines)
+        line = self.lines[line_number]
+        line_rule = self.rule_for_line(line_number)
+        if line_rule:  # line_rule is an Inference rule
+            # check if the assumptions appear before the conclusion
+            for assumption in line.assumptions:
+                if assumption >= line_number:
+                    return False
+            return line_rule.is_specialization_of(line.rule) and line.rule in self.rules
+        else:  # line is an assumption
+            formula = line.formula
+            if formula in self.statement.assumptions:
+                return True
+            return False
+        # Task 4.6b
+
     def is_valid(self) -> bool:
-        """Checks if the current proof is a valid proof of its claimed
-        conclusion from (instances of) its assumptions/axioms.
+        """Checks if the current proof is a valid proof of its claimed statement
+        via its inference rules.
 
         Returns:
             ``True`` if the current proof is a valid proof of its claimed
-            conclusion from (instances of) its assumptions/axioms, ``False``
-            otherwise.
+            statement via its inference rules, ``False`` otherwise.
         """
-        if len(self.lines) == 0 or self.lines[-1].formula != self.conclusion:
-            return False
+        # check if each line of the proof is valid
         for line_number in range(len(self.lines)):
-            if not self.lines[line_number].is_valid(self.assumptions,
-                                                    self.lines, line_number):
+            if not self.is_line_valid(line_number):
                 return False
-        return True
+        # check if the last line's formula is the same as the wanted conclusion
+        if self.lines[-1].formula == self.statement.conclusion:
+            return True
+        return False
+        # Task 4.6c
 
+# Chapter 5 tasks
 
-from propositions.proofs import Proof as PropositionalProof, \
-    InferenceRule as PropositionalInferenceRule, \
-    SpecializationMap as \
-        PropositionalSpecializationMap
-from propositions.axiomatic_systems import AXIOMATIC_SYSTEM as \
-    PROPOSITIONAL_AXIOMATIC_SYSTEM, \
-    MP, I0, I1, D, I2, N, NI, NN, R
-from propositions.tautology import prove_tautology as \
-    prove_propositional_tautology
-
-# Schema equivalents of the propositional-logic axioms for implication and
-# negation
-
-#: Schema equivalent of the propositional-logic self implication axiom
-#: `~propositions.axiomatic_systems.I0`.
-I0_SCHEMA = Schema(Formula.parse('(P()->P())'), {'P'})
-#: Schema equivalent of the propositional-logic implication introduction (right)
-#: axiom `~propositions.axiomatic_systems.I1`.
-I1_SCHEMA = Schema(Formula.parse('(Q()->(P()->Q()))'), {'P', 'Q'})
-#: Schema equivalent of the propositional-logic self-distribution of implication
-#: axiom `~propositions.axiomatic_systems.D`.
-D_SCHEMA = Schema(Formula.parse(
-    '((P()->(Q()->R()))->((P()->Q())->(P()->R())))'), {'P', 'Q', 'R'})
-#: Schema equivalent of the propositional-logic implication introduction (left)
-#: axiom `~propositions.axiomatic_systems.I2`.
-I2_SCHEMA = Schema(Formula.parse('(~P()->(P()->Q()))'), {'P', 'Q'})
-#: Schema equivalent of the propositional-logic converse contraposition axiom
-#: `~propositions.axiomatic_systems.N`.
-N_SCHEMA = Schema(Formula.parse('((~Q()->~P())->(P()->Q()))'), {'P', 'Q'})
-#: Schema equivalent of the propositional-logic negative-implication
-#: introduction axiom `~propositions.axiomatic_systems.NI`.
-NI_SCHEMA = Schema(Formula.parse('(P()->(~Q()->~(P()->Q())))'), {'P', 'Q'})
-#: Schema equivalent of the propositional-logic double-negation introduction
-#: axiom `~propositions.axiomatic_systems.NN`.
-NN_SCHEMA = Schema(Formula.parse('(P()->~~P())'), {'P'})
-#: Schema equivalent of the propositional-logic resolution axiom
-#: `~propositions.axiomatic_systems.R`.
-R_SCHEMA = Schema(Formula.parse(
-    '((Q()->P())->((~Q()->P())->P()))'), {'P', 'Q'})
-
-#: Schema system equivalent of the axioms of the propositional-logic large
-#: axiomatic system for implication and negation
-#: `~propositions.axiomatic_systems.AXIOMATIC_SYSTEM`.
-PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS = {I0_SCHEMA, I1_SCHEMA, D_SCHEMA,
-                                          I2_SCHEMA, N_SCHEMA, NI_SCHEMA,
-                                          NN_SCHEMA, R_SCHEMA}
-
-#: Mapping from propositional-logic axioms for implication and negation to their
-#: schema equivalents.
-PROPOSITIONAL_AXIOM_TO_SCHEMA = {
-    I0: I0_SCHEMA, I1: I1_SCHEMA, D: D_SCHEMA, I2: I2_SCHEMA, N: N_SCHEMA,
-    NI: NI_SCHEMA, NN: NN_SCHEMA, R: R_SCHEMA}
-
-
-def axiom_specialization_map_to_schema_instantiation_map(
-        propositional_specialization_map: PropositionalSpecializationMap,
-        substitution_map: Mapping[str, Formula]) -> Mapping[str, Formula]:
-    """Converts the given propositional-logic specialization map from a
-    propositional axiom to its specialization, to an instantiation map from
-    the schema equivalent of that axiom to a predicate-logic formula whose
-    skeleton is that specialization.
+def prove_specialization(proof: Proof, specialization: InferenceRule) -> Proof:
+    """Converts the given proof of an inference rule into a proof of the given
+    specialization of that inference rule.
 
     Parameters:
-        propositional_specialization_map: map specifying how some propositional
-            axiom `axiom` (which is not specified) from
-            `~propositions.axiomatic_systems.AXIOMATIC_SYSTEM` specializes into
-            some specialization `specialization` (which is also not specified).
-        substitution_map: map from each atomic propositional subformula of
-            `specialization` to a predicate-logic formula.
+        proof: valid proof to convert.
+        specialization: specialization of the conclusion of the given proof.
 
     Returns:
-        An instantiation map for instantiating the schema equivalent of `axiom`
-        into the predicate-logic formula obtained from its propositional
-        skeleton `specialization` by the given substitution map.
-
-    Examples:
-        >>> axiom_specialization_map_to_schema_instantiation_map(
-        ...     {'p': PropositionalFormula.parse('(z1->z2)'),
-        ...      'q': PropositionalFormula.parse('~z1')},
-        ...     {'z1': Formula.parse('Ax[(x=5&M())]'),
-        ...      'z2': Formula.parse('R(f(8,9))')})
-        {'P': (Ax[(x=5&M())]->R(f(8,9))), 'Q': ~Ax[(x=5&M())]}
+        A valid proof of the given specialization via the same inference rules
+        as the given proof.
     """
-    for variable in propositional_specialization_map:
-        assert is_propositional_variable(variable)
-    for key in substitution_map:
-        assert is_propositional_variable(key)
-    # Task 9.11.1
-    new_propositions = dict()
-    for proposition in propositional_specialization_map.keys():
-        new_propositions[proposition[0].upper()+proposition[1:]] =\
-            Formula.from_propositional_skeleton(
-                propositional_specialization_map[proposition], substitution_map)
-    return new_propositions
+    assert proof.is_valid()
+    assert specialization.is_specialization_of(proof.statement)
 
-
-
-def prove_from_skeleton_proof(formula: Formula,
-                              skeleton_proof: PropositionalProof,
-                              substitution_map: Mapping[str, Formula]) -> \
-        Proof:
-    """Converts the given proof of a propositional skeleton of the given
-    predicate-logic formula into a proof of that predicate-logic formula.
-
-    Parameters:
-        formula: predicate-logic formula to prove.
-        skeleton_proof: valid propositional-logic proof of a propositional
-            skeleton of the given formula, from no assumptions and via
-            `~propositions.axiomatic_systems.AXIOMATIC_SYSTEM`.
-        substitution_map: map from each atomic propositional subformula of the
-            skeleton of the given formula that is proven in the given proof to
-            the respective predicate-logic subformula of the given formula.
-
-    Returns:
-        A valid predicate-logic proof of the given formula from the axioms
-        `PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS` via only assumption lines and
-        MP lines.
-    """
-    assert len(skeleton_proof.statement.assumptions) == 0 and \
-           skeleton_proof.rules.issubset(PROPOSITIONAL_AXIOMATIC_SYSTEM) and \
-           skeleton_proof.is_valid()
-    assert Formula.from_propositional_skeleton(
-        skeleton_proof.statement.conclusion, substitution_map) == formula
-    # Task 9.11.2
-
-    assumptions = PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS
-    conclusion = formula
+    specialization_map = InferenceRule.specialization_map(
+        proof.statement, specialization)
+    # get the lines of the proof
     lines = list()
-    for line in skeleton_proof.lines:
-        formula = Formula.from_propositional_skeleton(line.formula, substitution_map)
-        if len(line.assumptions) == 0:  # line is a specialization of an axiom
-            axiom_specialization_map = PropositionalInferenceRule.\
-                formula_specialization_map(line.rule.conclusion, line.formula)
-            instantiation_map = \
-                axiom_specialization_map_to_schema_instantiation_map(
-                    axiom_specialization_map, substitution_map)
-            axiom = PROPOSITIONAL_AXIOM_TO_SCHEMA[line.rule]
-            lines.append(Proof.AssumptionLine(formula, axiom,
-                                              instantiation_map))
-        else:  # line rule is MP
-            lines.append(Proof.MPLine(formula, line.assumptions[0],
-                line.assumptions[1]))
+    for line in proof.lines:
+        substituted_f = Formula.substitute_variables(line.formula, specialization_map)
+        if line.is_assumption():
+            lines.append(Proof.Line(substituted_f))
+        else:
+            lines.append(Proof.Line(substituted_f, line.rule, line.assumptions))
     lines = tuple(lines)
-    return Proof(assumptions, conclusion, lines)
 
-def prove_tautology(tautology: Formula) -> Proof:
-    """Proves the given predicate-logic tautology.
+    return Proof(specialization, proof.rules, lines)
+    # Task 5.1
+
+def inline_proof_once(main_proof: Proof, line_number: int, lemma_proof: Proof) \
+    -> Proof:
+    """Inlines the given proof of a "lemma" inference rule into the given proof
+    that uses that "lemma" rule, eliminating the usage of (a specialization of)
+    that "lemma" rule in the specified line in the latter proof.
 
     Parameters:
-        tautology: predicate-logic tautology to prove.
+        main_proof: valid proof to inline into.
+        line: index of the line in `main_proof` that should be replaced.
+        lemma_proof: valid proof of the inference rule of the specified line (an
+            allowed inference rule of `main_proof`).
 
     Returns:
-        A valid proof of the given predicate-logic tautology from the axioms
-        `PROPOSITIONAL_AXIOMATIC_SYSTEM_SCHEMAS` via only assumption lines
-        and MP lines.
+        A valid proof obtained by replacing the specified line in `main_proof`
+        with a full (specialized) list of lines proving the formula of the
+        specified line from the lines specified as the assumptions of that line,
+        and updating line indices specified throughout the proof to maintain the
+        validity of the proof. The set of allowed inference rules in the
+        returned proof is the union of the rules allowed in the two given
+        proofs, but the "lemma" rule that is used in the specified line in
+        `main_proof` is no longer used in the corresponding lines in the
+        returned proof (and thus, this "lemma" rule is used one less time in the
+        returned proof than in `main_proof`).
     """
-    assert is_propositional_tautology(tautology.propositional_skeleton()[0])
+    assert main_proof.lines[line_number].rule == lemma_proof.statement
+    assert lemma_proof.is_valid()
 
-    # Task 9.12
-    propositional_skeleton = Formula.propositional_skeleton(tautology)
-    skeleton_proof = prove_propositional_tautology(propositional_skeleton[0])
-    return prove_from_skeleton_proof(tautology, skeleton_proof,
-                                     propositional_skeleton[1])
+    replace_line = main_proof.lines[line_number]
+    rules = main_proof.rules.union(lemma_proof.rules)
+    specialized_lemma = prove_specialization(lemma_proof, main_proof.rule_for_line(line_number))
 
+    lines = list()
+    for i in range(line_number):
+        lines.append(main_proof.lines[i])
+
+    count = 0  # the place of the current index to assumption
+    for line in specialized_lemma.lines:
+        if line.is_assumption():
+            # There might be an assumption that appears more than once in a row
+            while main_proof.lines[replace_line.assumptions[count]].formula != line.formula:
+                count += 1
+            lines.append(main_proof.lines[replace_line.assumptions[count]])
+
+        else:
+            line_assumptions = [assumption + line_number for assumption in
+                                line.assumptions]
+            lines.append(Proof.Line(line.formula, line.rule, tuple(line_assumptions)))
+
+    # add the rest of the lines
+    lemma_length = len(lemma_proof.lines)
+    for i in range(line_number+1, len(main_proof.lines)):
+        line = main_proof.lines[i]
+        if line.is_assumption():
+            lines.append(line)
+        else:
+            new_assumptions = list()
+            for assumption in line.assumptions:
+                if assumption < line_number:
+                    new_assumptions.append(assumption)
+                else:  # assumption is after line_number
+                    new_assumptions.append(assumption + lemma_length - 1)
+            lines.append(Proof.Line(line.formula, line.rule, tuple(new_assumptions)))
+
+    return Proof(main_proof.statement, rules, lines)
+    # Task 5.2a
+
+def inline_proof(main_proof: Proof, lemma_proof: Proof) -> Proof:
+    """Inlines the given proof of a "lemma" inference rule into the given proof
+    that uses that "lemma" rule, eliminating all usages of (any specialization
+    of) that "lemma" rule in the latter proof.
+
+    Parameters:
+        main_proof: valid proof to inline into.
+        lemma_proof: valid proof of one of the allowed inference rules of
+            `main_proof`.
+
+    Returns:
+        A valid proof obtained from `main_proof` by inlining (an appropriate
+        specialization of) `lemma_proof` in lieu of each line that specifies the
+        "lemma" inference rule proved by `lemma_proof` as its justification. The
+        set of allowed inference rules in the returned proof is the union of the rules
+        allowed in the two given proofs but without the "lemma" rule proved by
+        `lemma_proof`.
+    """
+    lemma_length = len(lemma_proof.lines)
+    current_proof = main_proof
+    proof_length = len(current_proof.lines)
+    line_number = 0
+    # go over each lemma conclusion line and replace it with the lemma's proof
+    while line_number < proof_length:
+        if current_proof.lines[line_number].rule == lemma_proof.statement:
+            current_proof = inline_proof_once(current_proof, line_number, lemma_proof)
+            proof_length += lemma_length - 1
+            line_number += lemma_length
+        else:
+            line_number += 1
+
+    # remove the lemma's statement from the rules
+    rules = current_proof.rules.difference({lemma_proof.statement})
+
+    return Proof(current_proof.statement, rules, current_proof.lines)
+
+    # Task 5.2b
