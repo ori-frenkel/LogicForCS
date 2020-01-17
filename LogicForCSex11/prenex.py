@@ -89,13 +89,10 @@ def is_in_prenex_normal_form(formula: Formula) -> bool:
         otherwise.
     """
     # Task 11.3.2
-    if is_quantifier_free(formula):
-        return True
+    if is_quantifier(formula.root):
+        return is_in_prenex_normal_form(formula.predicate)
 
-    if not is_quantifier(formula.root) or is_binary(formula.root):
-        return False
-
-    return is_in_prenex_normal_form(formula.predicate)
+    return is_quantifier_free(formula)
 
 
 
