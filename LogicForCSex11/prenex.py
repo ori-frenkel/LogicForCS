@@ -211,6 +211,8 @@ def uniquely_rename_quantified_variables(formula: Formula) -> \
         return form, prover.qed()
 
     else:
+        # quantifier case
+        # assert is_quantifier(formula.root)
         i = 14 # i is the axiom we using, for E we using the 16 th axiom and
                #  for A the 15 th axiom
         if formula.root == 'E':
