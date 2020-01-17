@@ -164,6 +164,79 @@ def uniquely_rename_quantified_variables(formula: Formula) -> \
         `ADDITIONAL_QUANTIFICATION_AXIOMS`.
     """
     # Task 11.5
+    prover = Prover(ADDITIONAL_QUANTIFICATION_AXIOMS)
+    # if the formula is quantifier free, all the variable already unique
+    if is_quantifier_free(formula):
+        f_f = Formula('->', formula, formula)
+        prover.add_tautology(Formula('&', f_f, f_f))
+        return formula, prover.qed()
+
+    elif is_unary(formula.root):
+        # in the comments here I am will address _formula as formula without the '~'
+        # getting the renamed formula and proof without the '~'
+        formula_without_not_uniquely_renamed_var, prover2 = uniquely_rename_quantified_variables(
+            formula.first)
+        # adding the proof of the equivalence of
+        # formula_without_not_uniquely_renamed_var to formula without the '~'
+        line = prover.add_proof(prover2.conclusion, prover2)
+
+        # wanting to add to the prover that ~formula_without_not_uniquely_renamed_var <-> formula
+        # I will mark the above formula as 'formula_wanting_to_add'
+        not_formula_unique_var = Formula('~',
+                                         formula_without_not_uniquely_renamed_var)
+
+        formula_wanting_to_add = Formula('&',
+                                         Formula('->', formula,
+                                                 not_formula_unique_var),
+                                         Formula('->', not_formula_unique_var,
+                                                 formula))
+
+        prover.add_tautological_implication(formula_wanting_to_add, {line})
+        return not_formula_unique_var, prover.qed()
+
+    elif is_binary(formula.root):
+        formula_first, proof_first = uniquely_rename_quantified_variables(
+                                     formula.first)
+        formula_second, proof_second = uniquely_rename_quantified_variables(
+                                     formula.second)
+
+        line1 = prover.add_proof(proof_first.conclusion, proof_first)
+        line2 = prover.add_proof(proof_second.conclusion, proof_second)
+        # using tautology implication on
+        # formula iff Formula(formula.root, formula_first, formula_second)
+        form = Formula(formula.root, formula_first, formula_second)
+        formula_wanting_to_add = Formula('&', Formula('->', formula, form),
+                                              Formula('->', form, formula))
+        prover.add_tautological_implication(formula_wanting_to_add, {line1, line2})
+        return form, prover.qed()
+
+    else:
+        i = 14 # i is the axiom we using, for E we using the 16 th axiom and
+               #  for A the 15 th axiom
+        if formula.root == 'E':
+            i = 15
+        f_predicate_unique_var, p_predicate_unique_var = \
+            uniquely_rename_quantified_variables(formula.predicate)
+
+        line1 = prover.add_proof(p_predicate_unique_var.conclusion,
+                                 p_predicate_unique_var)
+        # now using Axiom number 16 with the following map.
+        new_unique_var = next(fresh_variable_name_generator)
+        _map = {'R' : formula.predicate.substitute({
+                                        formula.variable : Term.parse('_')}),
+                'x': formula.variable,
+                'y' : new_unique_var,
+                'Q' : f_predicate_unique_var.substitute({
+                                        formula.variable : Term.parse('_')})}
+        form = ADDITIONAL_QUANTIFICATION_AXIOMS[i].instantiate(_map)
+        line2 = prover.add_instantiated_assumption(
+            form, ADDITIONAL_QUANTIFICATION_AXIOMS[i], _map)
+        prover.add_mp(form.second, line1, line2)
+        unique_var_formula = Formula(formula.root, new_unique_var,
+                                     f_predicate_unique_var.substitute({
+                                        formula.variable : Term.parse(new_unique_var)}))
+        return unique_var_formula, prover.qed()
+
 
 def pull_out_quantifications_across_negation(formula: Formula) -> \
         Tuple[Formula, Proof]:
