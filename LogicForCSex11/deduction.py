@@ -107,7 +107,7 @@ def remove_assumption(proof: Proof, assumption: Formula,
                                                 _formula_US, Prover.US, _map)
             old_line_to_new_line_idx[idx] = proof_to_return.add_mp(
                                         _conclusion, ug_line, conditional_line)
-            
+
     # using this for task 11.2, proof_by_way_of_contradiction
     if proof_contradiction:
         _conclusion = Formula('~', assumption)
