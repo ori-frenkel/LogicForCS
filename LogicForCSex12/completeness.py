@@ -109,6 +109,8 @@ def is_universally_closed(sentences: AbstractSet[Formula]) -> bool:
         if _s.root == 'A':
             _all_relevant_formula.add(_s)
 
+    # replace the variable of the quantification with every const in the sentence,
+    # and than checking, if the predicate with that replacement is in the sentence
     for _form in _all_relevant_formula:
         for _const in _all_constant:
             if _form.predicate.substitute({_form.variable : Term(_const)}) \
@@ -136,6 +138,29 @@ def is_existentially_closed(sentences: AbstractSet[Formula]) -> bool:
         assert is_in_prenex_normal_form(sentence) and \
                len(sentence.free_variables()) == 0
     # Task 12.1.3
+    _all_constant = set()  # all the constant of all the formulas in sentences
+    _all_relevant_formula = set()  # contain all formula of the form: Ex[something]
+    for _s in sentences:
+        _all_constant = _all_constant.union(_s.constants())
+        if _s.root == 'E':
+            _all_relevant_formula.add(_s)
+
+    for _form in _all_relevant_formula:
+        # replace the variable of the quantification with every const in the sentence,
+        # and than checking, if the predicate with that replacement is in the sentence
+        # if exist at least one of such replacement in sentence, than return True
+        # 'not_exist', represent if for each formula
+        # (predicate of relevant formula) exist such formula in sentence or not
+        not_exist = True
+        for _const in _all_constant:
+            if _form.predicate.substitute({_form.variable : Term(_const)}) \
+                    in sentences:
+                not_exist = False
+                break
+        if not_exist:
+            return False
+    return True
+
 
 def find_unsatisfied_quantifier_free_sentence(sentences: Container[Formula],
                                               model: Model[str],
