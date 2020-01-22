@@ -102,6 +102,21 @@ def is_universally_closed(sentences: AbstractSet[Formula]) -> bool:
         assert is_in_prenex_normal_form(sentence) and \
                len(sentence.free_variables()) == 0
     # Task 12.1.2
+    _all_constant = set() # all the constant of all the formulas in sentences
+    _all_relevant_formula = set() # contain all formula of the form: Ax[something]
+    for _s in sentences:
+        _all_constant = _all_constant.union(_s.constants())
+        if _s.root == 'A':
+            _all_relevant_formula.add(_s)
+
+    for _form in _all_relevant_formula:
+        for _const in _all_constant:
+            if _form.predicate.substitute({_form.variable : Term(_const)}) \
+                    not in sentences:
+                return False
+    return True
+
+
 
 def is_existentially_closed(sentences: AbstractSet[Formula]) -> bool:
     """Checks whether the given set of prenex-normal-form sentences is
