@@ -240,7 +240,7 @@ def get_primitives(quantifier_free: Formula) -> Set[Formula]:
     # Task 12.3.1
     set_to_return = set()
     if is_relation(quantifier_free.root):
-        return Set(quantifier_free)
+        return {quantifier_free}
     elif is_unary(quantifier_free.root):
         set_to_return = get_primitives(quantifier_free.first)
     elif is_binary(quantifier_free.root):
@@ -264,8 +264,39 @@ def model_or_inconsistency(sentences: AbstractSet[Formula]) -> \
     """    
     assert is_closed(sentences)
     # Task 12.3.2
-    _constant = get_constants(sentences)
-    
+    # as per guidance, first construct the Model
+    _universe = get_constants(sentences)
+    _constant_meanings = {const : const for const in _universe}
+    _relation_meanings = dict()
+    # ignoring any sentence in sentences that is not a primitive sentence
+    # or its negation while constructing this model
+    for _s in sentences:
+        if is_relation(_s.root):
+            if _s.root not in _relation_meanings:
+                _relation_meanings[_s.root] = set(tuple(str(arg) for arg in _s.arguments))
+            else:
+                _relation_meanings[_s.root].add(tuple(str(arg) for arg in _s.arguments))
+    _model = Model(_universe, _constant_meanings, _relation_meanings)
+
+    # as per guidance, 'If this model satisfies sentences, then you are done'
+    # _unsatisfied = 'Otherwise, find some sentence from sentences that
+    #                 this model does not satisfy'
+    _unsatisfied = Formula
+    found_unsatisfied = False
+    for _sentence in sentences:
+        if not _model.evaluate_formula(_sentence):
+            found_unsatisfied = True
+            _unsatisfied = _sentence
+            break
+    if not found_unsatisfied:
+        return _model
+
+    quantifier_free_sentence = find_unsatisfied_quantifier_free_sentence(
+                                    sentences, _model, _unsatisfied)
+
+
+
+
 
 def combine_contradictions(proof_from_affirmation: Proof,
                            proof_from_negation: Proof) -> Proof:
