@@ -244,7 +244,8 @@ def get_primitives(quantifier_free: Formula) -> Set[Formula]:
     elif is_unary(quantifier_free.root):
         set_to_return = get_primitives(quantifier_free.first)
     elif is_binary(quantifier_free.root):
-        set_to_return = set_to_return.union(get_primitives(quantifier_free.first),
+        set_to_return = set_to_return.union(set_to_return,
+                                            get_primitives(quantifier_free.first),
                                             get_primitives(quantifier_free.second))
     return set_to_return
 
@@ -292,8 +293,29 @@ def model_or_inconsistency(sentences: AbstractSet[Formula]) -> \
     if not found_unsatisfied:
         return _model
 
+    # finding quantifier free unsatisfied sentence
+    quantifier_free_unsatisfied_sentence = _unsatisfied
+    if is_quantifier(_unsatisfied.root):
+        quantifier_free_unsatisfied_sentence =\
+            find_unsatisfied_quantifier_free_sentence(sentences, _model, _unsatisfied)
 
+    prover = Prover(sentences | Prover.AXIOMS | {quantifier_free_unsatisfied_sentence})
 
+    all_lines = set()
+    line1 = prover.add_assumption(quantifier_free_unsatisfied_sentence)
+
+    for _primitive in get_primitives(quantifier_free_unsatisfied_sentence):
+        if _primitive in sentences:
+            all_lines.add(prover.add_assumption(_primitive))
+        else:
+            all_lines.add(prover.add_assumption(Formula('~', _primitive)))
+    line2 = prover.add_tautological_implication(Formula('~', quantifier_free_unsatisfied_sentence), all_lines)
+    # ~quantifier_free_unsatisfied_sentence&quantifier_free_unsatisfied_sentence
+    form = Formula('&',
+                   Formula('~', quantifier_free_unsatisfied_sentence),
+                   quantifier_free_unsatisfied_sentence)
+    prover.add_tautological_implication(form, {line1, line2})
+    return prover.qed()
 
 
 
