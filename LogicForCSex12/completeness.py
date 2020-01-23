@@ -201,6 +201,26 @@ def find_unsatisfied_quantifier_free_sentence(sentences: Container[Formula],
     assert not model.evaluate_formula(unsatisfied)
     # Task 12.2
 
+    # wanting a quantifier-free sentence, and if unsatisfied is so,
+    # we can return it
+    if not is_quantifier(unsatisfied.root):
+        return unsatisfied
+
+    # else:
+    for _const in model.universe:
+        # peel of the Ax[] -->[] and replacing x with const
+        substituted_instance = unsatisfied.predicate.substitute(
+            {unsatisfied.variable: Term(_const)})
+        # we search for formula that not satisfied by the given model
+        if model.evaluate_formula(substituted_instance):
+            continue
+        # if unsatisfied.root == 'A' we would like to peel the 'A' OFF because
+        # wanting a quantifier-free sentence
+        elif unsatisfied.root == 'A' or substituted_instance in sentences:
+            return find_unsatisfied_quantifier_free_sentence(sentences, model,
+                                                      substituted_instance)
+
+
 def get_primitives(quantifier_free: Formula) -> Set[Formula]:
     """Finds all primitive subformulas of the given quantifier-free formula.
 
@@ -218,6 +238,15 @@ def get_primitives(quantifier_free: Formula) -> Set[Formula]:
     """
     assert is_quantifier_free(quantifier_free)
     # Task 12.3.1
+    set_to_return = set()
+    if is_relation(quantifier_free.root):
+        return Set(quantifier_free)
+    elif is_unary(quantifier_free.root):
+        set_to_return = get_primitives(quantifier_free.first)
+    elif is_binary(quantifier_free.root):
+        set_to_return = set_to_return.union(get_primitives(quantifier_free.first),
+                                            get_primitives(quantifier_free.second))
+    return set_to_return
 
 def model_or_inconsistency(sentences: AbstractSet[Formula]) -> \
         Union[Model[str], Proof]:
@@ -235,6 +264,8 @@ def model_or_inconsistency(sentences: AbstractSet[Formula]) -> \
     """    
     assert is_closed(sentences)
     # Task 12.3.2
+    _constant = get_constants(sentences)
+    
 
 def combine_contradictions(proof_from_affirmation: Proof,
                            proof_from_negation: Proof) -> Proof:
