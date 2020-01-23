@@ -273,9 +273,10 @@ def model_or_inconsistency(sentences: AbstractSet[Formula]) -> \
     for _s in sentences:
         if is_relation(_s.root):
             if _s.root not in _relation_meanings:
-                _relation_meanings[_s.root] = set(tuple(str(arg) for arg in _s.arguments))
+                _relation_meanings[_s.root] =  {tuple(str(arg) for arg in _s.arguments)}
             else:
-                _relation_meanings[_s.root].add(tuple(str(arg) for arg in _s.arguments))
+                # if already exist, adding another tuple with this arguments
+                _relation_meanings[_s.root].update({tuple(str(arg) for arg in _s.arguments)})
     _model = Model(_universe, _constant_meanings, _relation_meanings)
 
     # as per guidance, 'If this model satisfies sentences, then you are done'
@@ -291,8 +292,7 @@ def model_or_inconsistency(sentences: AbstractSet[Formula]) -> \
     if not found_unsatisfied:
         return _model
 
-    quantifier_free_sentence = find_unsatisfied_quantifier_free_sentence(
-                                    sentences, _model, _unsatisfied)
+
 
 
 
